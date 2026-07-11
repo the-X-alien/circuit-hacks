@@ -1,0 +1,71 @@
+---
+// Placeholder organizer roster — swap in real names, roles, and schools.
+const team = [
+  { name: 'Organizer Name', role: 'Lead Organizer', org: 'School / Org' },
+  { name: 'Organizer Name', role: 'Hardware Lead', org: 'School / Org' },
+  { name: 'Organizer Name', role: 'Operations', org: 'School / Org' },
+  { name: 'Organizer Name', role: 'Sponsorships', org: 'School / Org' },
+  { name: 'Organizer Name', role: 'Mentorship', org: 'School / Org' },
+  { name: 'Organizer Name', role: 'Design', org: 'School / Org' },
+];
+---
+
+<section id="team" class="section team" data-scene="crowd">
+  <div class="scrim">
+    <p class="kicker">09 — The Humans</p>
+    <h2 class="display-lg" data-split>Organized by<br />students, for students</h2>
+    <p class="lede intro" data-reveal>
+      A volunteer crew of Bay Area students and mentors who think the best way to learn engineering
+      is to hand you a soldering iron and get out of the way.
+    </p>
+    <div class="grid grid--3">
+      {
+        team.map((m) => (
+          <div class="card person" data-reveal>
+            <div class="avatar" aria-hidden="true">
+              <span class="mono">{m.name.split(' ').map((w) => w[0]).join('')}</span>
+            </div>
+            <h3>{m.name}</h3>
+            <p class="role mono">{m.role}</p>
+            <p>{m.org}</p>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  h2 {
+    margin-bottom: clamp(1.5rem, 3vh, 2.5rem);
+  }
+
+  .intro {
+    margin-bottom: clamp(2.5rem, 5vh, 4rem);
+  }
+
+  .avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, rgba(79, 227, 255, 0.18), rgba(139, 91, 255, 0.18));
+    border: 1px solid var(--line-strong);
+    margin-bottom: 1.2rem;
+  }
+
+  .avatar span {
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    color: var(--cyan);
+  }
+
+  .role {
+    font-size: 0.68rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--violet);
+    margin-bottom: 0.4rem;
+  }
+</style>

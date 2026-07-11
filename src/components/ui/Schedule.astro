@@ -1,0 +1,134 @@
+---
+const days = [
+  {
+    day: 'Saturday',
+    slots: [
+      { time: '09:00', label: 'Doors + check-in', note: 'Badge up, find your table, meet your mentors.' },
+      { time: '10:30', label: 'Opening ceremony', note: 'The theme is unsealed. Sixty seconds later, you have a direction.' },
+      { time: '11:00', label: 'Parts wall opens', note: 'Starter kits handed out. Team formation for solo hackers.' },
+      { time: '12:00', label: 'HACKING BEGINS', note: 'The 24-hour clock starts. Lunch rolls in while you breadboard.', hot: true },
+      { time: '15:00', label: 'Workshop: soldering 101', note: 'Never held an iron? Leave with a badge you soldered yourself.' },
+      { time: '19:00', label: 'Dinner + lightning talks', note: 'Engineers from sponsor teams on what they actually build.' },
+      { time: '23:59', label: 'Midnight surprise', note: 'Tradition says we can’t tell you. Tradition is correct.' },
+    ],
+  },
+  {
+    day: 'Sunday',
+    slots: [
+      { time: '02:00', label: 'Quiet hours begin', note: 'Nap room opens. The dedicated keep wiring.' },
+      { time: '07:30', label: 'Breakfast', note: 'Pancakes and a second wind.' },
+      { time: '12:00', label: 'HANDS OFF HARDWARE', note: 'The clock hits zero. Whatever state it’s in, it ships.', hot: true },
+      { time: '12:30', label: 'Demo expo', note: 'Science-fair style. Judges and parents walk the floor.' },
+      { time: '14:30', label: 'Awards ceremony', note: 'Prizes for engineering, ambition, chaos, and heart.' },
+      { time: '15:30', label: 'Doors close', note: 'Go home. Sleep. Post nothing coherent.' },
+    ],
+  },
+];
+---
+
+<section id="schedule" class="section schedule" data-scene="world">
+  <div class="scrim">
+    <p class="kicker">04 — The Clock</p>
+    <h2 class="display-lg" data-split>24 hours,<br />minute by minute</h2>
+    <div class="days">
+      {
+        days.map((d) => (
+          <div class="day" data-reveal>
+            <h3 class="day-name mono">{d.day}</h3>
+            <ol class="slots">
+              {d.slots.map((s) => (
+                <li class:list={['slot', { 'slot--hot': s.hot }]}>
+                  <span class="time mono">{s.time}</span>
+                  <div>
+                    <p class="slot-label">{s.label}</p>
+                    <p class="slot-note">{s.note}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+        ))
+      }
+    </div>
+    <p class="fineprint mono" data-reveal>Schedule is provisional — final version ships with your acceptance email.</p>
+  </div>
+</section>
+
+<style>
+  h2 {
+    margin-bottom: clamp(2.5rem, 5vh, 4rem);
+  }
+
+  .days {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(2rem, 4vw, 5rem);
+    max-width: 68rem;
+  }
+
+  .day-name {
+    font-size: 0.75rem;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--violet);
+    margin-bottom: 1.6rem;
+  }
+
+  .slots {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: 0.2rem;
+  }
+
+  .slot {
+    display: grid;
+    grid-template-columns: 4rem 1fr;
+    gap: 1.2rem;
+    padding: 0.9rem 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .time {
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    color: var(--ink-faint);
+    padding-top: 0.15rem;
+  }
+
+  .slot-label {
+    font-weight: 550;
+    font-size: 0.95rem;
+    letter-spacing: 0.01em;
+  }
+
+  .slot-note {
+    color: var(--ink-dim);
+    font-size: 0.85rem;
+    margin-top: 0.15rem;
+  }
+
+  .slot--hot .slot-label {
+    color: var(--cyan);
+    font-family: var(--font-mono);
+    letter-spacing: 0.14em;
+    font-size: 0.85rem;
+  }
+
+  .slot--hot .time {
+    color: var(--cyan);
+  }
+
+  .fineprint {
+    margin-top: 3rem;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    color: var(--ink-faint);
+  }
+
+  @media (max-width: 760px) {
+    .days {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

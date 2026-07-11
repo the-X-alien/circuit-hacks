@@ -1,0 +1,73 @@
+---
+import { EVENT_DATE, RSVP_URL, CONTACT_URL } from '~/config';
+---
+
+<section id="rsvp" class="section section--full cta" data-scene="fluid">
+  <div class="section-inner">
+    <p class="kicker">10 — The Decision</p>
+    <h2 class="display-xl" data-split>Be in<br />the room</h2>
+    <p class="lede" data-reveal>
+      {EVENT_DATE}. Twenty-four hours. Zero dollars. One machine that didn't exist before you
+      built it. Spots are limited and the waitlist is real.
+    </p>
+    <div class="cta-actions" data-reveal>
+      <a class="btn btn--primary btn--big" href={RSVP_URL} target="_blank" rel="noopener">
+        RSVP now <span class="arrow">→</span>
+      </a>
+      <a class="btn btn--ghost" href={CONTACT_URL} target="_blank" rel="noopener">Contact us</a>
+    </div>
+    <p class="hint mono" data-reveal aria-hidden="true">// the background is live — move your cursor</p>
+  </div>
+</section>
+
+<style>
+  .cta {
+    text-align: center;
+  }
+
+  .cta .kicker {
+    justify-content: center;
+  }
+
+  .cta .kicker::after {
+    content: '';
+    width: 2.2em;
+    height: 1px;
+    background: linear-gradient(270deg, var(--cyan), transparent);
+    flex: none;
+  }
+
+  h2 {
+    margin-bottom: clamp(1.5rem, 3.5vh, 3rem);
+  }
+
+  .lede {
+    margin-inline: auto;
+    margin-bottom: clamp(2rem, 4.5vh, 3.4rem);
+  }
+
+  .cta-actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .btn--big {
+    font-size: 0.95rem;
+    padding: 1.2em 2.6em;
+  }
+
+  .hint {
+    margin-top: clamp(2.5rem, 6vh, 4rem);
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+    color: var(--ink-faint);
+  }
+
+  @media (pointer: coarse) {
+    .hint {
+      display: none;
+    }
+  }
+</style>

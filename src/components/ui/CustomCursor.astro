@@ -1,0 +1,54 @@
+<div class="cursor-dot" id="cursor-dot" aria-hidden="true"></div>
+<div class="cursor-ring" id="cursor-ring" aria-hidden="true"></div>
+
+<script>
+  const fine = matchMedia('(pointer: fine)').matches;
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (fine && !reduced) {
+    const dot = document.getElementById('cursor-dot')!;
+    const ring = document.getElementById('cursor-ring')!;
+    document.documentElement.classList.add('has-cursor');
+
+    let x = innerWidth / 2;
+    let y = innerHeight / 2;
+    let rx = x;
+    let ry = y;
+    let visible = false;
+
+    window.addEventListener(
+      'pointermove',
+      (e) => {
+        x = e.clientX;
+        y = e.clientY;
+        if (!visible) {
+          visible = true;
+          dot.style.opacity = '1';
+          ring.style.opacity = '1';
+        }
+        dot.style.transform = `translate(${x - 3}px, ${y - 3}px)`;
+      },
+      { passive: true }
+    );
+
+    document.addEventListener('mouseleave', () => {
+      visible = false;
+      dot.style.opacity = '0';
+      ring.style.opacity = '0';
+    });
+
+    // Grow on interactive elements
+    document.addEventListener('mouseover', (e) => {
+      const hit = (e.target as HTMLElement).closest('a, button, [data-hover]');
+      ring.classList.toggle('is-hover', !!hit);
+    });
+
+    const loop = () => {
+      rx += (x - rx) * 0.16;
+      ry += (y - ry) * 0.16;
+      ring.style.transform = `translate(${rx}px, ${ry}px) translate(-50%, -50%)`;
+      requestAnimationFrame(loop);
+    };
+    loop();
+  }
+</script>

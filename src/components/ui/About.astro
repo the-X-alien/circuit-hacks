@@ -1,0 +1,57 @@
+---
+import { EVENT_DURATION } from '~/config';
+---
+
+<section id="about" class="section about" data-scene="world">
+  <div class="scrim">
+    <p class="kicker">01 — The Premise</p>
+    <h2 class="display-lg" data-split>
+      Software is easy.<br />Ship something <span class="accent">physical.</span>
+    </h2>
+    <div class="about-body">
+      <p class="lede" data-reveal>
+        Most hackathons end with a demo video and a Devpost link. This one ends with an object on a
+        table — soldered, wired, humming — that didn't exist {EVENT_DURATION} earlier.
+      </p>
+      <div class="about-cols" data-reveal>
+        <p>
+          We hand you the parts: microcontrollers, sensors, motors, breadboards, and a wall of
+          components you've probably never touched. You hand us back a machine. No hardware
+          experience required — mentors roam the floor all night, and every team gets a starter kit
+          that works out of the box.
+        </p>
+        <p>
+          It's completely free. Food, parts, tools, swag — covered. You bring a laptop, an idea you
+          can't let go of, and the willingness to stay up past your bedtime making something real.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  h2 {
+    margin-bottom: clamp(2rem, 4vh, 3rem);
+    max-width: 18ch;
+  }
+
+  .about-body {
+    display: grid;
+    gap: clamp(1.5rem, 3vw, 3rem);
+    max-width: 60rem;
+  }
+
+  .about-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(1.5rem, 3vw, 3rem);
+    color: var(--ink-dim);
+    font-size: 0.95rem;
+  }
+
+  @media (max-width: 760px) {
+    .about-cols {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

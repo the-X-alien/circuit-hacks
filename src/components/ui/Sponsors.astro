@@ -1,0 +1,118 @@
+---
+import { SPONSOR_EMAIL } from '~/config';
+
+// Placeholder slots — swap names/logos as sponsors sign on.
+const tiers = [
+  { tier: 'Title', slots: 2, size: 'lg' },
+  { tier: 'Core', slots: 4, size: 'md' },
+  { tier: 'Community', slots: 6, size: 'sm' },
+];
+---
+
+<section id="sponsors" class="section sponsors" data-scene="crowd">
+  <div class="scrim">
+    <p class="kicker">08 — The Backers</p>
+    <h2 class="display-lg" data-split>Powered by<br />people who build</h2>
+    <p class="lede intro" data-reveal>
+      Every free meal, free sensor, and free 3 a.m. snack exists because a company decided high
+      schoolers deserve real hardware. These slots are waiting for logos.
+    </p>
+    {
+      tiers.map((t) => (
+        <div class="tier" data-reveal>
+          <p class="tier-name mono">{t.tier}</p>
+          <div class={`logos logos--${t.size}`}>
+            {Array.from({ length: t.slots }).map(() => (
+              <div class="logo-slot">
+                <span class="mono">YOUR LOGO</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))
+    }
+    <div class="sponsor-cta" data-reveal>
+      <a class="btn btn--primary" href={`mailto:${SPONSOR_EMAIL}?subject=Sponsoring the hackathon`}>
+        Sponsor the event <span class="arrow">→</span>
+      </a>
+      <p class="mono note">Prospectus available on request · {SPONSOR_EMAIL}</p>
+    </div>
+  </div>
+</section>
+
+<style>
+  h2 {
+    margin-bottom: clamp(1.5rem, 3vh, 2.5rem);
+  }
+
+  .intro {
+    margin-bottom: clamp(2.5rem, 5vh, 4rem);
+  }
+
+  .tier {
+    margin-bottom: 2.5rem;
+  }
+
+  .tier-name {
+    font-size: 0.68rem;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 1rem;
+  }
+
+  .logos {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .logos--lg { grid-template-columns: repeat(2, 1fr); }
+  .logos--md { grid-template-columns: repeat(4, 1fr); }
+  .logos--sm { grid-template-columns: repeat(6, 1fr); }
+
+  .logo-slot {
+    display: grid;
+    place-items: center;
+    border: 1px dashed var(--line-strong);
+    border-radius: 12px;
+    aspect-ratio: 5 / 2;
+    transition: border-color 0.3s ease, background-color 0.3s ease;
+  }
+
+  .logos--lg .logo-slot { aspect-ratio: 4 / 1; }
+
+  .logo-slot:hover {
+    border-color: var(--cyan);
+    background: rgba(79, 227, 255, 0.03);
+  }
+
+  .logo-slot span {
+    font-size: 0.6rem;
+    letter-spacing: 0.3em;
+    color: var(--ink-faint);
+  }
+
+  .sponsor-cta {
+    margin-top: 3rem;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+  }
+
+  .note {
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    color: var(--ink-faint);
+  }
+
+  @media (max-width: 900px) {
+    .logos--md { grid-template-columns: repeat(2, 1fr); }
+    .logos--sm { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  @media (max-width: 560px) {
+    .logos--lg { grid-template-columns: 1fr; }
+    .logos--sm { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>

@@ -1,0 +1,43 @@
+---
+import '@fontsource-variable/inter';
+import '@fontsource-variable/space-grotesk';
+import '~/styles/global.css';
+import { EVENT_NAME, SITE_DESCRIPTION, EVENT_LOCATION } from '~/config';
+
+interface Props {
+  title?: string;
+}
+
+const { title = `${EVENT_NAME} — 24-Hour Hardware Hackathon, ${EVENT_LOCATION}` } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={SITE_DESCRIPTION} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={SITE_DESCRIPTION} />
+    <meta property="og:type" content="website" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <link
+      rel="icon"
+      href={`data:image/svg+xml,${encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect x="8" y="8" width="16" height="16" rx="2" fill="none" stroke="#4fe3ff" stroke-width="2"/><rect x="13" y="13" width="6" height="6" fill="#8b5bff"/><path d="M12 8V3M16 8V3M20 8V3M12 29v-5M16 29v-5M20 29v-5M8 12H3M8 16H3M8 20H3M29 12h-5M29 16h-5M29 20h-5" stroke="#4fe3ff" stroke-width="1.6"/></svg>`
+      )}`}
+    />
+    <script is:inline>
+      document.documentElement.classList.remove('no-js');
+      document.documentElement.classList.add('js');
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        document.documentElement.classList.add('reduced-motion');
+      }
+    </script>
+  </head>
+  <body>
+    <div class="site-bg" aria-hidden="true"></div>
+    <slot />
+  </body>
+</html>
