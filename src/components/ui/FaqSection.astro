@@ -1,0 +1,19 @@
+---
+import Faq from './Faq';
+---
+
+<section id="faq" class="section faq" data-scene="world">
+  <div class="scrim">
+    <p class="kicker">07 — Questions</p>
+    <h2 class="display-lg" data-split>Asked &amp;<br />answered</h2>
+    <div data-reveal>
+      <Faq client:visible />
+    </div>
+  </div>
+</section>
+
+<style>
+  h2 {
+    margin-bottom: clamp(2.5rem, 5vh, 4rem);
+  }
+</style>

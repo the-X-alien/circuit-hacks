@@ -1,0 +1,144 @@
+---
+import { EVENT_NAME } from '~/config';
+---
+
+<div class="preloader" id="preloader" data-name={EVENT_NAME}>
+  <div class="pre-inner">
+    <p class="pre-name mono" id="pre-name">{EVENT_NAME}</p>
+    <div class="pre-bar"><span id="pre-fill"></span></div>
+    <p class="pre-status mono" id="pre-status">ESTABLISHING UPLINK…</p>
+  </div>
+</div>
+
+<noscript>
+  <style>
+    .preloader {
+      display: none;
+    }
+  </style>
+</noscript>
+
+<style>
+  .preloader {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: grid;
+    place-items: center;
+    background: #060607;
+    transition: opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.9s;
+  }
+
+  .preloader.done {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .pre-inner {
+    display: grid;
+    justify-items: center;
+    gap: 1.6rem;
+    width: min(320px, 80vw);
+  }
+
+  .pre-name {
+    font-size: clamp(1rem, 3vw, 1.4rem);
+    letter-spacing: 0.3em;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  .pre-bar {
+    width: 100%;
+    height: 1px;
+    background: rgba(242, 242, 245, 0.14);
+    overflow: hidden;
+  }
+
+  .pre-bar span {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--cyan), var(--violet));
+    transition: width 0.4s ease;
+  }
+
+  .pre-status {
+    font-size: 0.6rem;
+    letter-spacing: 0.35em;
+    color: var(--ink-faint);
+  }
+
+  :global(html.is-loading) {
+    overflow: hidden;
+  }
+</style>
+
+<script>
+  const el = document.getElementById('preloader')!;
+  const nameEl = document.getElementById('pre-name')!;
+  const fill = document.getElementById('pre-fill')!;
+  const status = document.getElementById('pre-status')!;
+  const html = document.documentElement;
+  const NAME = el.dataset.name || 'LOADING';
+  const GLYPHS = '█▓▒░<>/\\|_—=+*#01';
+
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const finish = () => {
+    if (el.classList.contains('done')) return;
+    el.classList.add('done');
+    html.classList.remove('is-loading');
+    html.classList.add('site-entered');
+    window.dispatchEvent(new Event('site:enter'));
+    setTimeout(() => el.remove(), 1000);
+  };
+
+  if (reduced) {
+    finish();
+  } else {
+    html.classList.add('is-loading');
+
+    // Decrypt scramble on the codename
+    let tick = 0;
+    const scramble = setInterval(() => {
+      tick++;
+      const settled = Math.floor((tick / 26) * NAME.length);
+      nameEl.textContent = NAME.split('')
+        .map((ch, i) =>
+          i < settled || ch === ' ' ? ch : GLYPHS[Math.floor(Math.random() * GLYPHS.length)]
+        )
+        .join('');
+      if (settled >= NAME.length) {
+        nameEl.textContent = NAME;
+        clearInterval(scramble);
+      }
+    }, 50);
+
+    // Progress: fonts (45%) → WebGL first frame (100%), hard cap 4.5s
+    let progress = 8;
+    const setP = (p: number) => {
+      progress = Math.max(progress, p);
+      fill.style.width = progress + '%';
+    };
+    setP(8);
+    const drift = setInterval(() => setP(Math.min(progress + Math.random() * 3, 88)), 220);
+
+    document.fonts?.ready.then(() => {
+      setP(45);
+      status.textContent = 'COMPILING SHADERS…';
+    });
+
+    const done = () => {
+      clearInterval(drift);
+      setP(100);
+      status.textContent = 'SIGNAL ACQUIRED';
+      setTimeout(finish, 550);
+    };
+
+    if ((window as any).__siteBus?.ready) done();
+    else window.addEventListener('experience:ready', done, { once: true });
+    setTimeout(done, 4500);
+  }
+</script>

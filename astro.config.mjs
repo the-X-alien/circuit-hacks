@@ -1,0 +1,10 @@
+import { defineConfig } from 'astro/config';
+import react from '@astrojs/react';
+import glsl from 'vite-plugin-glsl';
+
+export default defineConfig({
+  integrations: [react()],
+  vite: {
+    plugins: [glsl()],
+  },
+});

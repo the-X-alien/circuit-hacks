@@ -1,0 +1,61 @@
+---
+import { EVENT_DATE, EVENT_LOCATION, EVENT_VENUE, EVENT_DURATION } from '~/config';
+
+const facts = [
+  {
+    label: 'When',
+    value: EVENT_DATE,
+    sub: `Saturday morning to Sunday afternoon — ${EVENT_DURATION} of build time.`,
+  },
+  {
+    label: 'Where',
+    value: EVENT_LOCATION,
+    sub: `${EVENT_VENUE}. Transit-accessible, parent drop-off friendly.`,
+  },
+  {
+    label: 'Who',
+    value: 'High schoolers',
+    sub: 'Grades 9–12, all experience levels. Solo or teams up to 4.',
+  },
+  {
+    label: 'Cost',
+    value: '$0.00',
+    sub: 'Free forever. Meals, snacks, parts, tools, and swag included.',
+  },
+];
+---
+
+<section id="details" class="section details" data-scene="world">
+  <p class="kicker">02 — The Coordinates</p>
+  <div class="grid grid--4">
+    {
+      facts.map((f, i) => (
+        <div class="card" data-reveal>
+          <span class="num">{String(i + 1).padStart(2, '0')}</span>
+          <p class="fact-label mono">{f.label}</p>
+          <p class="fact-value">{f.value}</p>
+          <p>{f.sub}</p>
+        </div>
+      ))
+    }
+  </div>
+</section>
+
+<style>
+  .fact-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 0.5rem;
+  }
+
+  .fact-value {
+    font-family: var(--font-display);
+    font-size: clamp(1.4rem, 2.2vw, 1.9rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.7rem;
+    color: var(--ink);
+  }
+</style>

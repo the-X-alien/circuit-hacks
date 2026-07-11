@@ -1,0 +1,130 @@
+---
+const bring = [
+  { icon: '💻', label: 'Laptop + charger', note: 'Any OS. We flash firmware from anything.' },
+  { icon: '🪪', label: 'Student ID', note: 'Or any proof you’re in grades 9–12.' },
+  { icon: '📄', label: 'Signed waiver', note: 'Emailed after you RSVP. Parent signature required.' },
+  { icon: '🛏️', label: 'Sleeping bag', note: 'Optional. The nap room has floor space and dim lights.' },
+  { icon: '🪥', label: 'Toiletries', note: 'Toothbrush, deodorant. Your teammates thank you.' },
+  { icon: '🧥', label: 'A hoodie', note: 'Venue AC does not negotiate at 3 a.m.' },
+  { icon: '🎧', label: 'Headphones', note: 'For lock-in mode.' },
+  { icon: '🔩', label: 'Your own parts', note: 'Optional. Anything pre-built must be declared at check-in.' },
+];
+
+const provided = [
+  'Microcontrollers (Arduino, ESP32, Pi)',
+  'Sensor + motor library',
+  'Breadboards, jumpers, resistor kits',
+  'Soldering stations (supervised)',
+  '3D printers + filament',
+  'Hand tools + multimeters',
+  'All meals, snacks, caffeine',
+  'Wi-Fi that survives 200 hackers',
+];
+---
+
+<section id="bring" class="section bring" data-scene="world">
+  <div class="scrim">
+    <p class="kicker">05 — The Loadout</p>
+    <h2 class="display-lg" data-split>Pack light.<br />We have the rest.</h2>
+    <div class="cols">
+      <div>
+        <h3 class="col-title mono" data-reveal>// bring this</h3>
+        <ul class="bring-list">
+          {
+            bring.map((b) => (
+              <li data-reveal>
+                <span class="icon" aria-hidden="true">{b.icon}</span>
+                <div>
+                  <p class="item-label">{b.label}</p>
+                  <p class="item-note">{b.note}</p>
+                </div>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+      <div>
+        <h3 class="col-title mono" data-reveal>// already on the tables</h3>
+        <ul class="provided-list" data-reveal>
+          {provided.map((p) => <li>{p}</li>)}
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  h2 {
+    margin-bottom: clamp(2.5rem, 5vh, 4rem);
+  }
+
+  .cols {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: clamp(2.5rem, 5vw, 6rem);
+    max-width: 68rem;
+  }
+
+  .col-title {
+    font-size: 0.72rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 1.6rem;
+  }
+
+  .bring-list {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: 1.1rem;
+  }
+
+  .bring-list li {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .icon {
+    font-size: 1.2rem;
+    line-height: 1.5;
+    flex: none;
+  }
+
+  .item-label {
+    font-weight: 550;
+    font-size: 0.95rem;
+  }
+
+  .item-note {
+    color: var(--ink-dim);
+    font-size: 0.85rem;
+  }
+
+  .provided-list {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: 0;
+  }
+
+  .provided-list li {
+    padding: 0.85rem 0;
+    border-top: 1px solid var(--line);
+    color: var(--ink-dim);
+    font-size: 0.92rem;
+  }
+
+  .provided-list li::before {
+    content: '+ ';
+    color: var(--violet);
+    font-family: var(--font-mono);
+  }
+
+  @media (max-width: 760px) {
+    .cols {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

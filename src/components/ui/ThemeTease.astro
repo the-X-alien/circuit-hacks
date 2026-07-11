@@ -1,0 +1,60 @@
+---
+---
+
+<section id="theme" class="section section--full theme" data-scene="metal">
+  <div class="section-inner">
+    <p class="kicker">03 — The Track</p>
+    <h2 class="display-lg" data-split>
+      One track.<br />
+      <span class="classified"><span class="tag mono">[REDACTED]</span> until doors open.</span>
+    </h2>
+    <p class="lede" data-reveal>
+      No pre-planning. No head starts. Every team hears the theme at the same moment, standing in
+      the same room, staring at the same wall of parts. Twenty-four hours later, we see what you
+      made of it.
+    </p>
+    <p class="theme-hint mono" data-reveal aria-hidden="true">
+      &gt; decrypting theme.sig — <span class="blink">access denied_</span>
+    </p>
+  </div>
+</section>
+
+<style>
+  h2 {
+    margin-bottom: clamp(2rem, 4vh, 3rem);
+  }
+
+  .classified {
+    font-size: 0.62em;
+    letter-spacing: 0;
+  }
+
+  .tag {
+    color: var(--magenta);
+    letter-spacing: 0.08em;
+    text-shadow: 0 0 22px rgba(255, 79, 216, 0.55);
+    animation: redact-flicker 4s steps(1) infinite;
+  }
+
+  @keyframes redact-flicker {
+    0%, 91% { opacity: 1; }
+    92%, 93% { opacity: 0.4; }
+    94%, 100% { opacity: 1; }
+  }
+
+  .theme-hint {
+    margin-top: clamp(2rem, 5vh, 3.5rem);
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    color: var(--ink-faint);
+  }
+
+  .blink {
+    animation: blink 1.1s steps(1) infinite;
+    color: var(--magenta);
+  }
+
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+</style>

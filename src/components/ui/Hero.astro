@@ -1,0 +1,111 @@
+---
+import {
+  EVENT_NAME,
+  EVENT_DATE_SHORT,
+  EVENT_YEAR,
+  EVENT_LOCATION,
+  RSVP_URL,
+  TAGLINE,
+} from '~/config';
+---
+
+<section id="top" class="section section--full hero" data-scene="morph">
+  <div class="section-inner">
+    <p class="hero-meta mono" data-reveal>
+      <span>{EVENT_DATE_SHORT} {EVENT_YEAR}</span>
+      <span class="dot" aria-hidden="true"></span>
+      <span>{EVENT_LOCATION}</span>
+      <span class="dot" aria-hidden="true"></span>
+      <span>HIGH SCHOOL HARDWARE HACKATHON</span>
+    </p>
+    <h1 class="display-xl" data-split>{EVENT_NAME}</h1>
+    <p class="lede hero-lede" data-reveal>
+      {TAGLINE} One secret track, sealed until the doors open. Build something that exists — then
+      make it blink, move, and think.
+    </p>
+    <div class="hero-cta" data-reveal>
+      <a class="btn btn--primary" href={RSVP_URL} target="_blank" rel="noopener">
+        Claim your spot <span class="arrow">→</span>
+      </a>
+      <a class="btn btn--ghost" href="#about" data-anchor>Enter the signal</a>
+    </div>
+  </div>
+  <div class="hero-scroll mono" aria-hidden="true">
+    <span>SCROLL</span>
+    <span class="scroll-line"></span>
+  </div>
+</section>
+
+<style>
+  .hero {
+    text-align: left;
+  }
+
+  .hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.28em;
+    color: var(--ink-dim);
+    margin-bottom: clamp(1.5rem, 3vh, 2.5rem);
+  }
+
+  .dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--cyan);
+    flex: none;
+  }
+
+  h1 {
+    margin-bottom: clamp(1.5rem, 3.5vh, 3rem);
+  }
+
+  .hero-lede {
+    margin-bottom: clamp(2rem, 4.5vh, 3.4rem);
+  }
+
+  .hero-cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .hero-scroll {
+    position: absolute;
+    bottom: 2.2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.8rem;
+    font-size: 0.6rem;
+    letter-spacing: 0.4em;
+    color: var(--ink-faint);
+  }
+
+  .scroll-line {
+    width: 1px;
+    height: 52px;
+    background: linear-gradient(var(--ink-faint), transparent);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .scroll-line::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(var(--cyan), transparent);
+    animation: scroll-hint 2.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  }
+
+  @keyframes scroll-hint {
+    0% { transform: translateY(-100%); }
+    60%, 100% { transform: translateY(100%); }
+  }
+</style>

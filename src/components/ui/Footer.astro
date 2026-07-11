@@ -1,0 +1,79 @@
+---
+import { EVENT_NAME, EVENT_DATE, EVENT_LOCATION, CONTACT_URL, GENERAL_EMAIL, SPONSOR_EMAIL } from '~/config';
+
+const year = new Date().getFullYear();
+---
+
+<footer class="footer" data-scene="fluid">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <p class="mono name">{EVENT_NAME}</p>
+      <p class="mono meta">{EVENT_DATE} · {EVENT_LOCATION}</p>
+    </div>
+    <nav class="footer-links" aria-label="Footer">
+      <a href={CONTACT_URL} target="_blank" rel="noopener">Contact form</a>
+      <a href={`mailto:${GENERAL_EMAIL}`}>{GENERAL_EMAIL}</a>
+      <a href={`mailto:${SPONSOR_EMAIL}`}>Sponsor inquiries</a>
+      <a href="#top" data-anchor>Back to top ↑</a>
+    </nav>
+    <p class="mono fine">
+      © {year} — Built by student organizers. Code of conduct applies to all attendees, mentors,
+      and organizers.
+    </p>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    position: relative;
+    z-index: 1;
+    border-top: 1px solid var(--line);
+    padding: 3rem var(--pad) 4rem;
+  }
+
+  .footer-inner {
+    max-width: 1480px;
+    margin-inline: auto;
+    display: grid;
+    gap: 2rem;
+  }
+
+  .name {
+    font-size: 0.9rem;
+    letter-spacing: 0.15em;
+    color: var(--ink);
+  }
+
+  .meta {
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    color: var(--ink-faint);
+    margin-top: 0.4rem;
+  }
+
+  .footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.8rem;
+  }
+
+  .footer-links a {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    text-decoration: none;
+    transition: color 0.3s ease;
+  }
+
+  .footer-links a:hover {
+    color: var(--cyan);
+  }
+
+  .fine {
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    color: var(--ink-faint);
+  }
+</style>

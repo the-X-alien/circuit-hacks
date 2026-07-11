@@ -1,0 +1,90 @@
+---
+import { CONTACT_URL, GENERAL_EMAIL } from '~/config';
+
+const points = [
+  {
+    title: 'Supervised, all night',
+    body: 'Background-checked adult organizers and mentors are on-site for the full 24 hours, plus venue security. The floor is never unstaffed, including overnight.',
+  },
+  {
+    title: 'Check-in / check-out',
+    body: 'Students badge in at arrival and out at departure. Leaving early requires the pickup contact listed on the waiver. We know who is in the building at all times.',
+  },
+  {
+    title: 'Overnight, by choice',
+    body: 'Staying overnight is optional. Parents may pick students up Saturday night and drop them back Sunday morning — just note it at check-in. A quiet nap room with staff supervision is available all night.',
+  },
+  {
+    title: 'Food & allergies',
+    body: 'All meals, snacks, and drinks are provided free. The RSVP form collects dietary restrictions and allergies; every station is labeled.',
+  },
+  {
+    title: 'Safety-first hardware',
+    body: 'Soldering irons and power tools live in a supervised zone with mandatory 5-minute safety briefings. Safety glasses provided and required. Low-voltage electronics only.',
+  },
+  {
+    title: 'Reach us anytime',
+    body: 'Parents receive an organizer hotline number before the event — a human answers 24/7 during the hackathon. You’re also welcome at the Sunday demo expo.',
+  },
+];
+---
+
+<section id="parents" class="section parents" data-scene="world">
+  <div class="scrim">
+    <p class="kicker">06 — For Parents</p>
+    <h2 class="display-lg" data-split>The fine print,<br />up front</h2>
+    <p class="lede intro" data-reveal>
+      You're handing us your kid for a weekend. Here's exactly how we take care of them.
+    </p>
+    <div class="grid grid--3">
+      {
+        points.map((p, i) => (
+          <div class="card" data-reveal>
+            <span class="num">{String(i + 1).padStart(2, '0')}</span>
+            <h3>{p.title}</h3>
+            <p>{p.body}</p>
+          </div>
+        ))
+      }
+    </div>
+    <div class="parent-cta" data-reveal>
+      <a class="btn btn--ghost" href={CONTACT_URL} target="_blank" rel="noopener">
+        Ask us anything <span class="arrow">→</span>
+      </a>
+      <p class="mono contact-line">or email <a href={`mailto:${GENERAL_EMAIL}`}>{GENERAL_EMAIL}</a></p>
+    </div>
+  </div>
+</section>
+
+<style>
+  h2 {
+    margin-bottom: clamp(1.5rem, 3vh, 2.5rem);
+  }
+
+  .intro {
+    margin-bottom: clamp(2.5rem, 5vh, 4rem);
+  }
+
+  .parent-cta {
+    margin-top: clamp(2.5rem, 5vh, 4rem);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+  }
+
+  .contact-line {
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    color: var(--ink-faint);
+  }
+
+  .contact-line a {
+    color: var(--cyan);
+    text-decoration: none;
+  }
+
+  .contact-line a:hover {
+    text-decoration: underline;
+  }
+</style>
