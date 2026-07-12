@@ -17,9 +17,10 @@
   --blue-deep: #2f5e8f;
   --glow: rgba(230, 181, 74, 0.32);
 
-  --font-display: 'Syne Variable', 'Syne', sans-serif;
-  --font-body: 'Inter Variable', 'Inter', system-ui, sans-serif;
-  --font-mono: 'Space Mono', ui-monospace, 'SF Mono', monospace;
+  /* Instrument Serif for display = editorial, not "AI geometric" */
+  --font-display: 'Instrument Serif', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --font-body: 'DM Sans', 'Helvetica Neue', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'SF Mono', ui-monospace, monospace;
 
   --pad: clamp(1.25rem, 4vw, 4rem);
   --measure: 62ch;
@@ -49,10 +50,11 @@ body {
   font-family: var(--font-body);
   font-size: clamp(0.95rem, 0.9rem + 0.2vw, 1.05rem);
   line-height: 1.7;
-  font-weight: 360;
+  font-weight: 400;
   letter-spacing: 0.005em;
   overflow-x: clip;
   min-height: 100vh;
+  font-feature-settings: 'ss01' on, 'cv11' on;
 }
 
 img,
@@ -111,29 +113,44 @@ button {
 
 /* ── Typography ─────────────────────────────────────────────────── */
 h1,
-h2,
-h3 {
+h2 {
   font-family: var(--font-display);
-  font-weight: 600;
-  line-height: 1.0;
-  letter-spacing: -0.025em;
+  font-weight: 400;
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+  font-style: italic;
+  text-wrap: balance;
+}
+
+h3 {
+  font-family: var(--font-body);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  font-style: normal;
   text-wrap: balance;
 }
 
 .display-xl {
-  font-size: clamp(2.8rem, 11vw, 9rem);
-  text-transform: uppercase;
+  font-size: clamp(2.6rem, 10.5vw, 8.4rem);
+  text-transform: none;
+  font-style: italic;
+  letter-spacing: -0.03em;
+  font-weight: 400;
 }
 
 .display-lg {
-  font-size: clamp(2.2rem, 6.5vw, 5.2rem);
+  font-size: clamp(2.1rem, 6vw, 4.8rem);
   text-transform: none;
-  font-weight: 600;
-  letter-spacing: -0.03em;
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: -0.025em;
 }
 
 .display-md {
-  font-size: clamp(1.6rem, 3.6vw, 2.8rem);
+  font-size: clamp(1.5rem, 3.4vw, 2.6rem);
+  font-style: italic;
+  font-weight: 400;
 }
 
 .kicker {
@@ -162,8 +179,8 @@ h3 {
 
 .lede {
   font-size: clamp(1.05rem, 1.5vw, 1.35rem);
-  line-height: 1.6;
-  font-weight: 340;
+  line-height: 1.65;
+  font-weight: 400;
   color: var(--ink-dim);
   max-width: var(--measure);
 }
@@ -367,7 +384,8 @@ html.reduced-motion [data-reveal] {
 
 /* ── Custom cursor ──────────────────────────────────────────────── */
 .cursor-dot,
-.cursor-ring {
+.cursor-ring,
+.cursor-glow {
   position: fixed;
   top: 0;
   left: 0;
@@ -384,23 +402,46 @@ html.reduced-motion [data-reveal] {
   mix-blend-mode: difference;
 }
 
+/* Smaller yellow cursor shadow */
 .cursor-ring {
-  width: 20px;
-  height: 20px;
-  border: 1px solid rgba(241, 233, 216, 0.3);
-  transition: width 0.3s ease, height 0.3s ease, border-color 0.3s ease;
-  mix-blend-mode: difference;
+  width: 14px;
+  height: 14px;
+  border: 1px solid rgba(230, 181, 74, 0.55);
+  box-shadow: 0 0 10px rgba(230, 181, 74, 0.25);
+  transition: width 0.3s ease, height 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .cursor-ring.is-hover {
-  width: 34px;
-  height: 34px;
-  border-color: var(--gold);
+  width: 26px;
+  height: 26px;
+  border-color: var(--gold-bright);
+  box-shadow: 0 0 16px rgba(230, 181, 74, 0.4);
+}
+
+/* Weak ambient "room" glow that trails the cursor everywhere */
+.cursor-glow {
+  width: 120px;
+  height: 120px;
+  background: radial-gradient(
+    circle,
+    rgba(230, 181, 74, 0.1) 0%,
+    rgba(230, 181, 74, 0.03) 40%,
+    transparent 70%
+  );
+  mix-blend-mode: screen;
+  transition: width 0.4s ease, height 0.4s ease, opacity 0.3s ease;
+}
+
+.cursor-glow.is-hover {
+  width: 160px;
+  height: 160px;
+  opacity: 1;
 }
 
 @media (pointer: coarse) {
   .cursor-dot,
-  .cursor-ring {
+  .cursor-ring,
+  .cursor-glow {
     display: none;
   }
 }

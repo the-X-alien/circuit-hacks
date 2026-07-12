@@ -22,15 +22,21 @@ const half = Math.floor(chars.length / 2);
       <span>HIGH SCHOOL HARDWARE HACKATHON</span>
     </p>
     <h1 class="display-xl" data-hero-title>
-      <span class="accent" data-hero-chars>
-        {chars.map((ch, i) => (
-          <span class="hero-char" data-i={i} style={`--i: ${i}; --mid: ${Math.abs(i - half)}`}>
-            {ch === ' ' ? '\u00A0' : ch}
-          </span>
-        ))}
+      <span class="accent hero-title-keep" data-hero-chars>
+        {
+          chars.map((ch, i) => (
+            <span
+              class="hero-char"
+              data-i={i}
+              style={`--i: ${i}; --mid: ${Math.abs(i - half)}`}
+            >
+              {ch === ' ' ? '\u00A0' : ch}
+            </span>
+          ))
+        }
       </span>
     </h1>
-    <p class="lede hero-lede" data-reveal>
+    <p class="lede hero-lede hero-title-keep" data-reveal>
       <span class="accent-gold">{TAGLINE}</span> One secret track, sealed until the doors open. Build something that exists — then
       make it blink, move, and think.
     </p>
@@ -63,24 +69,32 @@ const half = Math.floor(chars.length / 2);
         opacity: 1,
         y: 0,
         rotateX: 0,
-        duration: 0.8,
-        stagger: 0.035,
+        duration: 0.85,
+        stagger: 0.032,
         ease: 'power3.out',
-        delay: 0.3,
+        delay: 0.25,
       });
     };
     window.addEventListener('site:enter', enter, { once: true });
 
-    // Focus-driven middle fade
+    // Middle letters dissolve when pointer is over the circuit center.
+    // Outer letters + the lede stay fully readable (keep the gold highlight look).
     const loop = () => {
       const focus = bus.focus;
       const half = Math.floor(chars.length / 2);
       chars.forEach((ch) => {
-        const i = parseInt(ch.dataset.i ?? '0');
+        const i = parseInt(ch.dataset.i ?? '0', 10);
         const dist = Math.abs(i - half);
-        const midWeight = 1 - dist / half;
-        const opacity = 1 - midWeight * focus * 0.85;
+        // Only middle letters dissolve; edges stay solid
+        const midWeight = Math.max(0, 1 - dist / Math.max(1, half * 0.55));
+        // Soft gaussian falloff for the dissolve
+        const dissolve = midWeight * midWeight * focus;
+        const opacity = 1 - dissolve * 0.92;
+        const blur = dissolve * 6;
+        const y = dissolve * -6;
         ch.style.opacity = String(opacity);
+        ch.style.filter = blur > 0.05 ? `blur(${blur.toFixed(2)}px)` : 'none';
+        ch.style.transform = `translateY(${y.toFixed(2)}px)`;
       });
       requestAnimationFrame(loop);
     };
@@ -125,8 +139,13 @@ const half = Math.floor(chars.length / 2);
 
   .hero-char {
     display: inline-block;
-    transition: opacity 0.15s ease;
-    will-change: opacity;
+    will-change: opacity, transform, filter;
+    transition: none;
+  }
+
+  /* Keep the gold gradient readable on the title + lede */
+  .hero-title-keep {
+    text-shadow: 0 0 40px rgba(230, 181, 74, 0.12);
   }
 
   .hero-lede {

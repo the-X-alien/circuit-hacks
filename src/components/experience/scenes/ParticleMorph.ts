@@ -286,9 +286,11 @@ export class ParticleMorph extends FXScene {
     const e = this.assembled.value;
     const eased = e < 0.5 ? 4 * e * e * e : 1 - Math.pow(-2 * e + 2, 3) / 2;
 
-    // Focus level: how close the pointer is to the circuit center
+    // Focus level: how close the pointer is to the circuit center.
+    // Stronger response near dead-center so middle letters dissolve cleanly.
     const focusDist = Math.sqrt(pointer.nx * pointer.nx + pointer.ny * pointer.ny);
-    bus.focus = 1 - Math.min(1, focusDist * 3.5);
+    const raw = 1 - Math.min(1, focusDist * 2.8);
+    bus.focus = raw * raw; // ease-in so edges stay readable longer
 
     const u = this.material.uniforms;
     u.uTime.value = t;

@@ -108,6 +108,13 @@ const year = new Date().getFullYear();
     border-color: var(--gold);
   }
 
+  /* Emphasize Dhiaan / the-X-alien first in the credit line */
+  .credit a:nth-of-type(1),
+  .credit a:nth-of-type(2) {
+    color: var(--gold-bright);
+    border-bottom-color: rgba(230, 181, 74, 0.45);
+  }
+
   .credit-heart {
     color: var(--gold);
     margin: 0 0.1rem;

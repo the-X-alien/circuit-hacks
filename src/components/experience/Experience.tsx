@@ -21,11 +21,11 @@ interface Run {
 
 const DIM: Record<string, number> = {
   morph: 1,
-  world: 0.5,
+  world: 0.72,
   metal: 0.9,
   crowd: 0.62,
   fluid: 1,
-  tree: 0.7,
+  tree: 0.85,
 };
 
 function signalReady() {

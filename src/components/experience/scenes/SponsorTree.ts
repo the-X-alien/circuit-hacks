@@ -1,345 +1,479 @@
 import * as THREE from 'three';
 import { FXScene, type UpdateArgs } from '../FXSceneManager';
 
-const TIER_COLORS: Record<string, number> = {
-  Partner: 0x6fa8d6,
-  Gold: 0xe6b54a,
-  Silver: 0xa0aec0,
-  Bronze: 0xbd8550,
-  'In-Kind': 0x5a7a8a,
-};
+/**
+ * Active Theory–style sponsor tree:
+ * a slowly rotating trunk with curved branches; 3D cards sit ON the
+ * branches in ascending rings — highest support at the crown.
+ *
+ * Tiers mirror covehacks.dev:
+ *   Partners → Gold → Silver → Bronze → In-Kind
+ */
 
 interface TierDef {
-  label: string
-  count: number
-  radius: number
-  startY: number
-  color: number
-  cardW: number
-  cardH: number
-  cardD: number
+  label: string;
+  count: number;
+  /** radius of the ring from trunk center */
+  radius: number;
+  /** height of the ring center */
+  y: number;
+  color: number;
+  cardW: number;
+  cardH: number;
 }
 
 const TIERS: TierDef[] = [
-  { label: 'Partner', count: 2, radius: 2.0, startY: 8.0, color: 0x6fa8d6, cardW: 3.2, cardH: 1.8, cardD: 0.12 },
-  { label: 'Gold', count: 3, radius: 3.0, startY: 5.5, color: 0xe6b54a, cardW: 2.8, cardH: 1.6, cardD: 0.10 },
-  { label: 'Silver', count: 4, radius: 4.0, startY: 3.0, color: 0xa0aec0, cardW: 2.4, cardH: 1.4, cardD: 0.09 },
-  { label: 'Bronze', count: 5, radius: 5.0, startY: 0.5, color: 0xbd8550, cardW: 2.0, cardH: 1.2, cardD: 0.08 },
-  { label: 'In-Kind', count: 6, radius: 6.0, startY: -2.5, color: 0x5a7a8a, cardW: 1.6, cardH: 1.0, cardD: 0.06 },
+  { label: 'Partners', count: 3, radius: 2.4, y: 9.2, color: 0x6fa8d6, cardW: 2.9, cardH: 1.7 },
+  { label: 'Gold', count: 4, radius: 3.6, y: 6.6, color: 0xe6b54a, cardW: 2.5, cardH: 1.5 },
+  { label: 'Silver', count: 5, radius: 4.6, y: 3.9, color: 0xb8c4d4, cardW: 2.15, cardH: 1.3 },
+  { label: 'Bronze', count: 6, radius: 5.5, y: 1.3, color: 0xbd8550, cardW: 1.85, cardH: 1.15 },
+  { label: 'In-Kind', count: 7, radius: 6.4, y: -1.4, color: 0x5a7a8a, cardW: 1.55, cardH: 1.0 },
 ];
 
+function hexCss(n: number) {
+  return '#' + n.toString(16).padStart(6, '0');
+}
+
+function makeCardTexture(tier: string, color: number, slot: number): THREE.CanvasTexture {
+  const W = 768;
+  const H = 448;
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d')!;
+  const c = hexCss(color);
+
+  // Card face
+  const grad = ctx.createLinearGradient(0, 0, W, H);
+  grad.addColorStop(0, '#14110c');
+  grad.addColorStop(1, '#0c0b09');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Outer rim
+  ctx.strokeStyle = c;
+  ctx.lineWidth = 6;
+  ctx.strokeRect(10, 10, W - 20, H - 20);
+
+  // Inner hairline
+  ctx.strokeStyle = 'rgba(241,233,216,0.12)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(22, 22, W - 44, H - 44);
+
+  // Tier pill
+  ctx.fillStyle = c;
+  ctx.globalAlpha = 0.18;
+  ctx.fillRect(36, 36, 200, 40);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = c;
+  ctx.font = 'bold 26px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText(tier.toUpperCase(), 48, 64);
+
+  // Slot index
+  ctx.fillStyle = 'rgba(241,233,216,0.35)';
+  ctx.font = '18px monospace';
+  ctx.fillText('SLOT ' + String(slot).padStart(2, '0'), 48, 100);
+
+  // Logo placeholder box
+  ctx.strokeStyle = c;
+  ctx.globalAlpha = 0.45;
+  ctx.setLineDash([8, 8]);
+  ctx.lineWidth = 2;
+  ctx.strokeRect(80, 140, W - 160, 180);
+  ctx.setLineDash([]);
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = 'rgba(241,233,216,0.22)';
+  ctx.font = 'bold 32px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('YOUR LOGO', W / 2, 245);
+
+  // Bottom accent bar
+  ctx.fillStyle = c;
+  ctx.globalAlpha = 0.55;
+  ctx.fillRect(36, H - 48, W - 72, 4);
+  ctx.globalAlpha = 1;
+
+  // Corner ticks
+  ctx.strokeStyle = c;
+  ctx.lineWidth = 3;
+  const tick = 22;
+  // TL
+  ctx.beginPath();
+  ctx.moveTo(10, 10 + tick);
+  ctx.lineTo(10, 10);
+  ctx.lineTo(10 + tick, 10);
+  ctx.stroke();
+  // TR
+  ctx.beginPath();
+  ctx.moveTo(W - 10 - tick, 10);
+  ctx.lineTo(W - 10, 10);
+  ctx.lineTo(W - 10, 10 + tick);
+  ctx.stroke();
+  // BL
+  ctx.beginPath();
+  ctx.moveTo(10, H - 10 - tick);
+  ctx.lineTo(10, H - 10);
+  ctx.lineTo(10 + tick, H - 10);
+  ctx.stroke();
+  // BR
+  ctx.beginPath();
+  ctx.moveTo(W - 10 - tick, H - 10);
+  ctx.lineTo(W - 10, H - 10);
+  ctx.lineTo(W - 10, H - 10 - tick);
+  ctx.stroke();
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  return tex;
+}
+
 export class SponsorTree extends FXScene {
-  private treeGroup = new THREE.Group();
+  private tree = new THREE.Group();
   private trunkMat!: THREE.ShaderMaterial;
-  private cardMats: THREE.ShaderMaterial[] = [];
+  private cardMats: THREE.MeshStandardMaterial[] = [];
+  private labelMats: THREE.MeshBasicMaterial[] = [];
+  private particles!: THREE.Points;
   private treeAngle = 0;
+  private cardGroups: THREE.Group[] = [];
 
   override init(renderer: THREE.WebGLRenderer, lite: boolean): void {
     super.init(renderer, lite);
-    this.camera.far = 500;
+    this.camera.far = 400;
+    this.camera.fov = 42;
     this.camera.updateProjectionMatrix();
-    this.camera.position.set(0, 2, 28);
+    this.camera.position.set(0, 4, 26);
 
-    const isLite = lite;
+    // ── Ground disc ──────────────────────────────────────────
+    const ground = new THREE.Mesh(
+      new THREE.CircleGeometry(14, 48),
+      new THREE.MeshStandardMaterial({
+        color: 0x0a0907,
+        roughness: 0.95,
+        metalness: 0.05,
+        transparent: true,
+        opacity: 0.85,
+      })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -3.2;
+    this.tree.add(ground);
 
-    // ── Trunk ──────────────────────────────────────────────────
+    // Concentric rings on ground
+    for (let r = 3; r <= 12; r += 3) {
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(r - 0.02, r + 0.02, 64),
+        new THREE.MeshBasicMaterial({
+          color: 0xe6b54a,
+          transparent: true,
+          opacity: 0.08,
+          side: THREE.DoubleSide,
+        })
+      );
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.y = -3.18;
+      this.tree.add(ring);
+    }
+
+    // ── Trunk (tapered, slightly irregular) ───────────────────
     this.trunkMat = new THREE.ShaderMaterial({
-      vertexShader: `
+      vertexShader: /* glsl */ `
         varying vec3 vPos;
         varying vec2 vUv;
+        varying vec3 vNormal;
         void main() {
           vUv = uv;
-          vec4 wp = modelMatrix * vec4(position, 1.0);
+          vNormal = normalize(normalMatrix * normal);
+          vec3 p = position;
+          // subtle bark undulation
+          p.x += sin(p.y * 2.4 + uv.x * 6.28) * 0.04;
+          p.z += cos(p.y * 2.1 + uv.x * 6.28) * 0.04;
+          vec4 wp = modelMatrix * vec4(p, 1.0);
           vPos = wp.xyz;
           gl_Position = projectionMatrix * viewMatrix * wp;
         }
       `,
-      fragmentShader: `
+      fragmentShader: /* glsl */ `
         uniform float uTime;
         varying vec3 vPos;
         varying vec2 vUv;
+        varying vec3 vNormal;
         void main() {
-          float grain = fract(sin(vPos.y * 14.0 + vUv.x * 44.0) * 437.0) * 0.05;
-          vec3 dark = vec3(0.08, 0.06, 0.03);
-          vec3 light = vec3(0.18, 0.12, 0.06);
-          float wave = 0.5 + 0.5 * sin(vPos.y * 0.8 + uTime * 0.1);
-          vec3 col = mix(dark, light, wave) + grain;
-          float edge = abs(vUv.x - 0.5) * 2.0;
-          vec3 blue = vec3(0.44, 0.66, 0.84);
+          float grain = fract(sin(vPos.y * 18.0 + vUv.x * 60.0) * 43758.0) * 0.06;
+          vec3 dark = vec3(0.07, 0.055, 0.03);
+          vec3 mid = vec3(0.16, 0.11, 0.055);
+          float wave = 0.5 + 0.5 * sin(vPos.y * 0.9 + uTime * 0.12);
+          vec3 col = mix(dark, mid, wave) + grain;
+
+          // vertical sap veins
+          float vein = pow(0.5 + 0.5 * sin(vUv.x * 40.0 + vPos.y * 3.0), 8.0);
           vec3 gold = vec3(0.90, 0.71, 0.29);
-          float pulse = 0.5 + 0.5 * sin(uTime * 0.5 + vPos.y);
-          col += mix(blue, gold, pulse) * pow(edge, 4.0) * 0.15;
+          vec3 blue = vec3(0.44, 0.66, 0.84);
+          float pulse = 0.5 + 0.5 * sin(uTime * 0.55 + vPos.y * 0.6);
+          col += mix(blue, gold, pulse) * vein * 0.18;
+
+          // rim light
+          float rim = pow(1.0 - abs(dot(normalize(vNormal), vec3(0.0, 0.0, 1.0))), 2.5);
+          col += gold * rim * 0.12;
+
           gl_FragColor = vec4(col, 1.0);
         }
       `,
       uniforms: { uTime: { value: 0 } },
     });
+
     const trunk = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.4, 1.0, 16, 14, 6),
+      new THREE.CylinderGeometry(0.28, 0.95, 14.5, 20, 12),
       this.trunkMat
     );
-    trunk.position.y = 1;
-    trunk.frustumCulled = false;
-    this.treeGroup.add(trunk);
+    trunk.position.y = 2.0;
+    trunk.castShadow = false;
+    this.tree.add(trunk);
 
-    // ── Cards on branches, tier by tier ────────────────────────
-    let cardIdx = 0;
+    // Root flare
+    const roots = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.95, 1.6, 1.2, 16, 1),
+      this.trunkMat
+    );
+    roots.position.y = -4.0;
+    this.tree.add(roots);
+
+    // Crown glow sphere
+    const crown = new THREE.Mesh(
+      new THREE.SphereGeometry(0.55, 16, 16),
+      new THREE.MeshBasicMaterial({
+        color: 0xe6b54a,
+        transparent: true,
+        opacity: 0.35,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      })
+    );
+    crown.position.y = 9.8;
+    this.tree.add(crown);
+
+    // ── Tier rings + cards ON branches ───────────────────────
+    let globalSlot = 1;
     for (const tier of TIERS) {
-      for (let ci = 0; ci < tier.count; ci++) {
-        const angle = (ci / tier.count) * Math.PI * 2 + tier.label.length * 0.3;
-        const y = tier.startY + (ci - (tier.count - 1) / 2) * 0.3;
-        const a = angle + cardIdx * 0.05;
-        const px = Math.cos(a) * tier.radius;
-        const pz = Math.sin(a) * tier.radius;
+      // Invisible ring guide (thin glow torus)
+      const torus = new THREE.Mesh(
+        new THREE.TorusGeometry(tier.radius, 0.018, 6, 48),
+        new THREE.MeshBasicMaterial({
+          color: tier.color,
+          transparent: true,
+          opacity: 0.22,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+        })
+      );
+      torus.rotation.x = Math.PI / 2;
+      torus.position.y = tier.y;
+      this.tree.add(torus);
 
-        // ── Branch arm (curved tube from trunk to card) ────────
-        const midR = tier.radius * 0.5;
+      // Tier label floating near ring
+      if (!lite) {
+        const tCanvas = document.createElement('canvas');
+        tCanvas.width = 256;
+        tCanvas.height = 64;
+        const tctx = tCanvas.getContext('2d')!;
+        tctx.fillStyle = hexCss(tier.color);
+        tctx.font = 'bold 28px monospace';
+        tctx.textAlign = 'center';
+        tctx.fillText(tier.label.toUpperCase(), 128, 40);
+        const tTex = new THREE.CanvasTexture(tCanvas);
+        tTex.colorSpace = THREE.SRGBColorSpace;
+        const tLabel = new THREE.Mesh(
+          new THREE.PlaneGeometry(1.6, 0.4),
+          new THREE.MeshBasicMaterial({
+            map: tTex,
+            transparent: true,
+            depthWrite: false,
+            opacity: 0.7,
+            side: THREE.DoubleSide,
+          })
+        );
+        tLabel.position.set(0, tier.y + 0.55, -tier.radius * 0.15);
+        this.tree.add(tLabel);
+      }
+
+      for (let ci = 0; ci < tier.count; ci++) {
+        // Even spacing around the ring, with tier-based phase offset
+        const phase = (ci / tier.count) * Math.PI * 2 + tier.y * 0.15;
+        const px = Math.cos(phase) * tier.radius;
+        const pz = Math.sin(phase) * tier.radius;
+        // slight vertical stagger so cards don't co-planar clip
+        const py = tier.y + Math.sin(ci * 1.7) * 0.18;
+
+        const cardGroup = new THREE.Group();
+        cardGroup.position.set(px, py, pz);
+        // face outward from trunk
+        cardGroup.lookAt(px * 2.2, py, pz * 2.2);
+
+        // Branch: curved tube from trunk to card
+        const midR = tier.radius * 0.55;
+        const attachY = tier.y - 0.15;
         const pts = [
-          new THREE.Vector3(0, y - 0.3, 0),
-          new THREE.Vector3(Math.cos(a) * midR * 0.5, y + 0.1, Math.sin(a) * midR * 0.5),
-          new THREE.Vector3(Math.cos(a) * midR, y + 0.2, Math.sin(a) * midR),
-          new THREE.Vector3(px, y, pz),
+          new THREE.Vector3(0, attachY, 0),
+          new THREE.Vector3(
+            Math.cos(phase) * midR * 0.35,
+            attachY + 0.35,
+            Math.sin(phase) * midR * 0.35
+          ),
+          new THREE.Vector3(
+            Math.cos(phase) * midR,
+            py + 0.15,
+            Math.sin(phase) * midR
+          ),
+          new THREE.Vector3(px, py, pz),
         ];
         const curve = new THREE.CatmullRomCurve3(pts);
+        const branch = new THREE.Mesh(
+          new THREE.TubeGeometry(curve, lite ? 8 : 16, 0.045, 5, false),
+          new THREE.MeshStandardMaterial({
+            color: 0x2a1e12,
+            roughness: 0.7,
+            metalness: 0.15,
+          })
+        );
+        this.tree.add(branch);
 
-        if (!isLite) {
-          const branchMat = new THREE.MeshBasicMaterial({
-            color: tier.color,
-            transparent: true,
-            opacity: 0.25,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false,
-          });
-          const branch = new THREE.Mesh(
-            new THREE.TubeGeometry(curve, 10, 0.035, 4, false),
-            branchMat
-          );
-          branch.frustumCulled = false;
-          this.treeGroup.add(branch);
-
-          // Wire overlay
-          const wire = new THREE.Mesh(
-            new THREE.TubeGeometry(curve, 10, 0.035, 4, false),
+        // Branch glow wire
+        if (!lite) {
+          const glowBranch = new THREE.Mesh(
+            new THREE.TubeGeometry(curve, 12, 0.02, 4, false),
             new THREE.MeshBasicMaterial({
               color: tier.color,
               transparent: true,
-              opacity: 0.06,
-              wireframe: true,
+              opacity: 0.28,
+              blending: THREE.AdditiveBlending,
               depthWrite: false,
             })
           );
-          wire.frustumCulled = false;
-          this.treeGroup.add(wire);
+          this.tree.add(glowBranch);
         }
 
-        // ── Branch tip glow ────────────────────────────────────
-        const tipGlow = new THREE.Mesh(
-          new THREE.SphereGeometry(0.1, 6, 6),
+        // Joint sphere at tip
+        const joint = new THREE.Mesh(
+          new THREE.SphereGeometry(0.12, 10, 10),
+          new THREE.MeshStandardMaterial({
+            color: tier.color,
+            emissive: tier.color,
+            emissiveIntensity: 0.55,
+            metalness: 0.4,
+            roughness: 0.35,
+          })
+        );
+        joint.position.set(px, py, pz);
+        this.tree.add(joint);
+
+        // ── 3D card body ────────────────────────────────────
+        const cardDepth = 0.1;
+        const cardMat = new THREE.MeshStandardMaterial({
+          color: 0x12100c,
+          metalness: 0.35,
+          roughness: 0.45,
+          emissive: tier.color,
+          emissiveIntensity: 0.08,
+        });
+        this.cardMats.push(cardMat);
+
+        const cardMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(tier.cardW, tier.cardH, cardDepth),
+          cardMat
+        );
+        cardGroup.add(cardMesh);
+
+        // Colored edge rim (slightly larger frame behind)
+        const rim = new THREE.Mesh(
+          new THREE.BoxGeometry(tier.cardW + 0.08, tier.cardH + 0.08, cardDepth * 0.5),
+          new THREE.MeshBasicMaterial({
+            color: tier.color,
+            transparent: true,
+            opacity: 0.55,
+          })
+        );
+        rim.position.z = -cardDepth * 0.4;
+        cardGroup.add(rim);
+
+        // Front face label texture
+        const faceTex = makeCardTexture(tier.label, tier.color, globalSlot++);
+        const faceMat = new THREE.MeshBasicMaterial({
+          map: faceTex,
+          transparent: true,
+          opacity: 0.95,
+          side: THREE.FrontSide,
+        });
+        this.labelMats.push(faceMat);
+        const face = new THREE.Mesh(
+          new THREE.PlaneGeometry(tier.cardW * 0.96, tier.cardH * 0.96),
+          faceMat
+        );
+        face.position.z = cardDepth / 2 + 0.01;
+        cardGroup.add(face);
+
+        // Soft back glow plate
+        const backGlow = new THREE.Mesh(
+          new THREE.PlaneGeometry(tier.cardW * 1.15, tier.cardH * 1.15),
           new THREE.MeshBasicMaterial({
             color: tier.color,
             transparent: true,
             opacity: 0.12,
             blending: THREE.AdditiveBlending,
             depthWrite: false,
+            side: THREE.DoubleSide,
           })
         );
-        tipGlow.position.set(px, y, pz);
-        tipGlow.frustumCulled = false;
-        this.treeGroup.add(tipGlow);
+        backGlow.position.z = -cardDepth * 0.6;
+        cardGroup.add(backGlow);
 
-        // ── 3D Card ────────────────────────────────────────────
-        const cardMat = new THREE.ShaderMaterial({
-          vertexShader: `
-            varying vec2 vUv;
-            varying vec3 vNormal;
-            void main() {
-              vUv = uv;
-              vNormal = normalize(normalMatrix * normal);
-              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }
-          `,
-          fragmentShader: `
-            uniform vec3 uColor;
-            uniform float uTime;
-            uniform float uOffset;
-            varying vec2 vUv;
-            varying vec3 vNormal;
-
-            void main() {
-              vec3 edge = uColor;
-
-              // Bevel border on front face
-              float bevel = 0.04;
-              float border = smoothstep(0.0, bevel, vUv.x) - smoothstep(1.0 - bevel, 1.0, vUv.x);
-              border *= smoothstep(0.0, bevel, vUv.y) - smoothstep(1.0 - bevel, 1.0, vUv.y);
-
-              // Face gradient
-              float faceGrad = 0.85 + 0.15 * (1.0 - vUv.y);
-
-              // Pulldown top band
-              float band = smoothstep(0.78, 0.86, vUv.y) * 0.15;
-
-              // Always visible edge glow
-              float pulse = 0.6 + 0.4 * sin(uTime * 0.5 + uOffset);
-              vec3 col = vec3(0.06, 0.05, 0.04);
-              col = mix(col, edge * 1.2, border * 0.5);
-              col += edge * pulse * 0.05;
-              col += edge * band;
-              col *= faceGrad;
-
-              // Side faces get darker
-              float side = abs(vNormal.x) > 0.5 || abs(vNormal.z) > 0.5 ? 1.0 : 0.0;
-              col *= 1.0 - side * 0.5;
-
-              float a = 0.7 + 0.2 * border;
-              gl_FragColor = vec4(col, a);
-            }
-          `,
-          uniforms: {
-            uColor: { value: new THREE.Color(tier.color) },
-            uTime: { value: 0 },
-            uOffset: { value: cardIdx * 1.7 },
-          },
-          transparent: true,
-          depthWrite: false,
-          side: THREE.DoubleSide,
-        });
-        this.cardMats.push(cardMat);
-
-        const cardGeo = new THREE.BoxGeometry(tier.cardW, tier.cardH, tier.cardD);
-        const card = new THREE.Mesh(cardGeo, cardMat);
-        card.position.set(px, y, pz);
-        // Face card outward from trunk
-        card.lookAt(px * 2, y, pz * 2);
-        card.frustumCulled = false;
-        this.treeGroup.add(card);
-
-        // ── Backplate (slightly larger, behind card) ──────────
-        const backMat = new THREE.MeshBasicMaterial({
-          color: tier.color,
-          transparent: true,
-          opacity: 0.04,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false,
-          side: THREE.DoubleSide,
-        });
-        const back = new THREE.Mesh(
-          new THREE.BoxGeometry(tier.cardW * 1.08, tier.cardH * 1.08, tier.cardD * 0.5),
-          backMat
-        );
-        back.position.set(px, y, pz);
-        back.lookAt(px * 2, y, pz * 2);
-        back.frustumCulled = false;
-        this.treeGroup.add(back);
-
-        // ── Canvas label ───────────────────────────────────────
-        if (!isLite) {
-          const canvas = document.createElement('canvas');
-          canvas.width = 512;
-          canvas.height = 256;
-          const ctx = canvas.getContext('2d')!;
-          ctx.clearRect(0, 0, 512, 256);
-
-          const hex = '#' + tier.color.toString(16).padStart(6, '0');
-
-          ctx.fillStyle = hex;
-          ctx.font = 'bold 22px monospace';
-          ctx.textAlign = 'left';
-          ctx.fillText(tier.label.toUpperCase(), 24, 36);
-
-          ctx.fillStyle = 'rgba(255,255,255,0.12)';
-          ctx.font = '12px monospace';
-          ctx.fillText('SLOT ' + (cardIdx + 1).toString().padStart(2, '0'), 24, 56);
-
-          ctx.strokeStyle = hex;
-          ctx.lineWidth = 1;
-          ctx.globalAlpha = 0.25;
-          ctx.setLineDash([4, 4]);
-          ctx.beginPath();
-          ctx.moveTo(24, 70);
-          ctx.lineTo(488, 70);
-          ctx.stroke();
-          ctx.setLineDash([]);
-          ctx.globalAlpha = 1;
-
-          ctx.fillStyle = 'rgba(255,255,255,0.03)';
-          ctx.fillRect(24, 90, 464, 100);
-          ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-          ctx.lineWidth = 1;
-          ctx.strokeRect(24, 90, 464, 100);
-          ctx.fillStyle = 'rgba(255,255,255,0.15)';
-          ctx.font = '18px monospace';
-          ctx.textAlign = 'center';
-          ctx.fillText('YOUR LOGO', 256, 154);
-
-          ctx.fillStyle = hex;
-          ctx.globalAlpha = 0.15;
-          ctx.fillRect(24, 210, 464, 3);
-          ctx.globalAlpha = 1;
-
-          const labelTex = new THREE.CanvasTexture(canvas);
-          labelTex.needsUpdate = true;
-          const labelMat = new THREE.MeshBasicMaterial({
-            map: labelTex,
-            transparent: true,
-            depthWrite: false,
-            opacity: 0.6,
-            side: THREE.DoubleSide,
-            blending: THREE.AdditiveBlending,
-          });
-          const label = new THREE.Mesh(
-            new THREE.PlaneGeometry(tier.cardW * 0.8, tier.cardH * 0.55),
-            labelMat
-          );
-          label.position.set(px, y, pz);
-          // Slightly forward of card face
-          const norm = new THREE.Vector3(px, 0, pz).normalize();
-          label.position.addScaledVector(norm, 0.07);
-          label.lookAt(px * 2, y, pz * 2);
-          label.frustumCulled = false;
-          this.treeGroup.add(label);
-        }
-
-        cardIdx++;
+        this.tree.add(cardGroup);
+        this.cardGroups.push(cardGroup);
       }
     }
 
-    // ── Floating particles ─────────────────────────────────────
-    const pCount = isLite ? 200 : 700;
+    // ── Ambient particles orbiting the tree ──────────────────
+    const pCount = lite ? 180 : 550;
     const pGeo = new THREE.BufferGeometry();
     const pos = new Float32Array(pCount * 3);
     const seeds = new Float32Array(pCount);
     for (let i = 0; i < pCount; i++) {
       const theta = Math.random() * Math.PI * 2;
-      const r = 2 + Math.random() * 8;
-      const y = -4 + Math.random() * 16;
+      const r = 1.5 + Math.random() * 9;
+      const y = -3.5 + Math.random() * 15;
       pos[i * 3] = Math.cos(theta) * r;
       pos[i * 3 + 1] = y;
       pos[i * 3 + 2] = Math.sin(theta) * r;
       seeds[i] = Math.random();
     }
     pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    pGeo.setAttribute('seed', new THREE.BufferAttribute(seeds, 1));
-
-    const particles = new THREE.Points(
+    pGeo.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1));
+    this.particles = new THREE.Points(
       pGeo,
       new THREE.ShaderMaterial({
-        vertexShader: `
-          attribute float seed;
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        uniforms: { uTime: { value: 0 } },
+        vertexShader: /* glsl */ `
+          attribute float aSeed;
           uniform float uTime;
           varying float vSeed;
           void main() {
-            vSeed = seed;
+            vSeed = aSeed;
             vec3 p = position;
-            p.y += sin(uTime * 0.2 + seed * 6.28 + position.x * 0.3) * 0.5;
-            p.x += sin(uTime * 0.15 + seed * 4.2) * 0.3;
-            p.z += cos(uTime * 0.18 + seed * 5.1) * 0.3;
+            float ang = uTime * (0.08 + aSeed * 0.12) + aSeed * 6.28;
+            float r = length(p.xz);
+            p.x = cos(ang) * r;
+            p.z = sin(ang) * r;
+            p.y += sin(uTime * 0.35 + aSeed * 12.0) * 0.35;
             vec4 mv = modelViewMatrix * vec4(p, 1.0);
-            gl_PointSize = (1.5 + seed * 3.0) * (80.0 / -mv.z);
+            gl_PointSize = (1.4 + aSeed * 3.2) * (70.0 / -mv.z);
             gl_Position = projectionMatrix * mv;
           }
         `,
-        fragmentShader: `
+        fragmentShader: /* glsl */ `
           varying float vSeed;
           uniform float uTime;
           void main() {
@@ -350,55 +484,61 @@ export class SponsorTree extends FXScene {
             if (vSeed < 0.33) col = vec3(0.44, 0.66, 0.84);
             else if (vSeed < 0.66) col = vec3(0.90, 0.71, 0.29);
             else col = vec3(0.74, 0.52, 0.31);
-            float twinkle = 0.5 + 0.5 * sin(uTime * 1.5 + vSeed * 100.0);
-            gl_FragColor = vec4(col, a * 0.35 * twinkle);
+            float tw = 0.5 + 0.5 * sin(uTime * 1.6 + vSeed * 90.0);
+            gl_FragColor = vec4(col, a * 0.4 * tw);
           }
         `,
-        uniforms: { uTime: { value: 0 } },
-        transparent: true,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
       })
     );
-    particles.frustumCulled = false;
-    this.treeGroup.add(particles);
+    this.particles.frustumCulled = false;
+    this.tree.add(this.particles);
 
-    this.scene.add(this.treeGroup);
+    this.scene.add(this.tree);
 
     // Lights
-    const hemi = new THREE.HemisphereLight(0x6fa8d6, 0x1b5e20, 0.6);
-    this.scene.add(hemi);
-    const dir = new THREE.DirectionalLight(0xf7d98c, 0.3);
-    dir.position.set(10, 20, 10);
-    this.scene.add(dir);
+    this.scene.add(new THREE.HemisphereLight(0x6fa8d6, 0x1a1208, 0.55));
+    const key = new THREE.DirectionalLight(0xffe6a8, 0.7);
+    key.position.set(8, 18, 10);
+    this.scene.add(key);
+    const fill = new THREE.PointLight(0x6fa8d6, 0.45, 40);
+    fill.position.set(-6, 4, 8);
+    this.scene.add(fill);
+    const warm = new THREE.PointLight(0xe6b54a, 0.55, 30);
+    warm.position.set(4, 8, -4);
+    this.scene.add(warm);
   }
 
   override update({ t, dt, p, pointer }: UpdateArgs): void {
-    // Auto-rotate the tree slowly
-    this.treeAngle += dt * 0.15;
-    this.treeGroup.rotation.y = this.treeAngle + pointer.nx * 0.2;
+    // Continuous slow spin — Active Theory energy
+    this.treeAngle += dt * 0.18;
+    this.tree.rotation.y = this.treeAngle + pointer.nx * 0.25;
+    this.tree.rotation.x = pointer.ny * -0.06;
 
-    // Slight tilt with pointer
-    this.treeGroup.rotation.x = pointer.ny * -0.05;
-
-    // Camera arcs around
+    // Camera orbits + climbs with scroll progress (ascending tiers)
     const sp = p;
-    const radius = 24 + pointer.ny * 1.5;
-    const height = 2 + sp * 8 + Math.sin(sp * Math.PI * 2) * 1.0;
-    const camAngle = sp * Math.PI * 2.0 + pointer.nx * 0.2;
+    const radius = 22 - sp * 3 + pointer.ny * 1.2;
+    const height = -0.5 + sp * 10.5;
+    const camAngle = this.treeAngle * 0.35 + sp * Math.PI * 0.6 + pointer.nx * 0.15;
     this.camera.position.set(
       Math.cos(camAngle) * radius,
       height,
       Math.sin(camAngle) * radius
     );
-    this.camera.lookAt(0, height * 0.3 + 1.5, 0);
+    this.camera.lookAt(0, height * 0.55 + 1.5, 0);
 
-    // Animate trunk
     this.trunkMat.uniforms.uTime.value = t;
+    (this.particles.material as THREE.ShaderMaterial).uniforms.uTime.value = t;
 
-    // Animate card materials
-    for (const m of this.cardMats) {
-      m.uniforms.uTime.value = t;
+    // Gentle card bob + face camera-ish via lookAt residual
+    for (let i = 0; i < this.cardGroups.length; i++) {
+      const g = this.cardGroups[i]!;
+      g.position.y += Math.sin(t * 0.9 + i * 0.7) * 0.0008;
+    }
+
+    // Pulse emissive on cards
+    for (let i = 0; i < this.cardMats.length; i++) {
+      const m = this.cardMats[i]!;
+      m.emissiveIntensity = 0.06 + 0.05 * Math.sin(t * 1.2 + i * 0.4);
     }
   }
 }

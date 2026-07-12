@@ -60,27 +60,26 @@ void main() {
   vec2 uv = vUv;
   vec2 aspect = vec2(uResolution.x / uResolution.y, 1.0);
 
-  // ── Always-on organic distortion + cursor spike ────────────
+  // ── Always-on organic distortion + smaller cursor spike ────
   vec2 md = (uv - uMouse) * aspect;
   float mr = length(md);
 
-  // Base displacement: always-active noise field across entire screen
-  float baseDisp = 0.015 + 0.010 * sin(uTime * 0.3 + uv.x * 7.0 + uv.y * 5.0);
-  float baseRipple = snoise(uv * 6.0 + uTime * 0.5) * 0.008;
+  // Base displacement: always-active weak field across entire screen
+  float baseDisp = 0.008 + 0.005 * sin(uTime * 0.3 + uv.x * 7.0 + uv.y * 5.0);
+  float baseRipple = snoise(uv * 6.0 + uTime * 0.5) * 0.004;
 
-  // Cursor-driven spike on top
-  float cursorInfl = smoothstep(0.45, 0.0, mr) * uMouseA;
-  float infl = 0.08 + cursorInfl; // base 0.08 always active
+  // Smaller cursor influence radius (was 0.45)
+  float cursorInfl = smoothstep(0.22, 0.0, mr) * uMouseA;
 
   vec2 dir = mr > 1e-4 ? md / mr : vec2(0.0);
 
-  float push = cursorInfl * 0.045;
-  float ripple = sin(mr * 42.0 - uTime * 4.5) * 0.015 * cursorInfl;
-  float swirl = (sin(mr * 8.0 - uTime * 1.2 + atan(md.y, md.x)) * 0.010 + baseRipple * 2.0) * cursorInfl;
-  float heatWarp = snoise(uv * 12.0 + uTime * 0.8) * 0.006 * cursorInfl;
+  float push = cursorInfl * 0.022;
+  float ripple = sin(mr * 48.0 - uTime * 4.5) * 0.008 * cursorInfl;
+  float swirl = (sin(mr * 10.0 - uTime * 1.2 + atan(md.y, md.x)) * 0.006 + baseRipple) * cursorInfl;
+  float heatWarp = snoise(uv * 12.0 + uTime * 0.8) * 0.003 * cursorInfl;
   vec2 cursorDisp = dir * (push + ripple + heatWarp) + vec2(-dir.y, dir.x) * swirl;
 
-  // Always-on weak noise field across whole screen
+  // Always-on weak noise field across whole screen (room ambience)
   vec2 baseNoise = vec2(
     snoise(uv * 5.0 + vec2(uTime * 0.15, 0.0)),
     snoise(uv * 5.0 + vec2(0.0, uTime * 0.15))
@@ -88,10 +87,10 @@ void main() {
 
   vec2 disp = cursorDisp + baseNoise;
 
-  // Chromatic separation: always-on base + cursor spike + edge weighting
+  // Chromatic separation: always-on base + tighter cursor spike
   float caDist = length(uv - 0.5);
-  float caBase = 0.006 + 0.010 * caDist * caDist + 0.004 * sin(uTime * 0.5 + uv.y * 4.0);
-  float caCursor = 0.025 * cursorInfl + 0.003 * sin(uTime * 1.5 + mr * 10.0) * cursorInfl;
+  float caBase = 0.004 + 0.007 * caDist * caDist + 0.002 * sin(uTime * 0.5 + uv.y * 4.0);
+  float caCursor = 0.012 * cursorInfl + 0.002 * sin(uTime * 1.5 + mr * 10.0) * cursorInfl;
   float caAmount = caBase + caCursor;
 
   vec2 suvR = uv + disp + vec2(caAmount, 0.0);
@@ -112,18 +111,19 @@ void main() {
   vec3 bloomB = sampleBloom(tB, suvG, uResolution);
   col += mix(bloomA, bloomB, uMix) * 0.45;
 
-  // ── Metallic sheen (always-on base + cursor boost) ─────────
+  // ── Metallic sheen (weak always-on + smaller cursor boost) ──
   vec3 sheenGold = vec3(0.96, 0.77, 0.38);
   vec3 sheenBlue = vec3(0.44, 0.66, 0.84);
   vec3 sheenBronze = vec3(0.74, 0.52, 0.31);
   float sheenMix = 0.5 + 0.5 * sin(uTime * 0.3 + uv.x * 3.0 + cursorInfl * 6.0);
-  float bronzeMix = 0.2 + 0.3 * cursorInfl;
+  float bronzeMix = 0.15 + 0.2 * cursorInfl;
   vec3 sheen = mix(mix(sheenGold, sheenBlue, sheenMix), sheenBronze, bronzeMix);
-  col += sheen * (0.04 + cursorInfl * 0.26);
-  col += vec3(0.12, 0.08, 0.04) * (0.04 + cursorInfl * 0.56);
+  // Always-on weak room sheen everywhere
+  col += sheen * (0.025 + cursorInfl * 0.12);
+  col += vec3(0.12, 0.08, 0.04) * (0.02 + cursorInfl * 0.22);
 
-  // ── Cursor-edge glow ring ──────────────────────────────────
-  float ringGlow = exp(-abs(mr - 0.15) * 80.0) * cursorInfl * 0.12;
+  // ── Smaller cursor-edge glow ring ──────────────────────────
+  float ringGlow = exp(-abs(mr - 0.08) * 120.0) * cursorInfl * 0.07;
   col += sheenGold * ringGlow;
 
   // ── Scanline glow (subtle) ─────────────────────────────────

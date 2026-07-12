@@ -1,38 +1,82 @@
 ---
 import { SPONSOR_EMAIL } from '~/config';
 
-// Placeholder slots — swap names/logos as sponsors sign on.
+// Cove Hacks–style tiers (ascending support: Partners at top of the tree)
 const tiers = [
-  { tier: 'Title', slots: 2, size: 'lg' },
-  { tier: 'Core', slots: 4, size: 'md' },
-  { tier: 'Community', slots: 6, size: 'sm' },
+  {
+    tier: 'Partners',
+    blurb: 'Title-level partners powering the whole weekend.',
+    slots: 3,
+    size: 'lg',
+    tone: 'partner',
+  },
+  {
+    tier: 'Gold',
+    blurb: 'Hardware, meals, and prizes that make the event free.',
+    slots: 4,
+    size: 'md',
+    tone: 'gold',
+  },
+  {
+    tier: 'Silver',
+    blurb: 'Tools, credits, and mentors on the floor.',
+    slots: 5,
+    size: 'sm',
+    tone: 'silver',
+  },
+  {
+    tier: 'Bronze',
+    blurb: 'Community backers keeping the lights on.',
+    slots: 6,
+    size: 'xs',
+    tone: 'bronze',
+  },
+  {
+    tier: 'In-Kind',
+    blurb: 'Products, credits, and services that make Circuit Hacks possible.',
+    slots: 7,
+    size: 'xs',
+    tone: 'inkind',
+  },
 ];
 ---
 
-<section id="sponsors" class="section sponsors" data-scene="tree">
+<section id="sponsors" class="section section--tree sponsors" data-scene="tree">
   <div class="scrim">
     <p class="kicker">08 — The Backers</p>
     <h2 class="display-lg" data-split>Powered by<br />people who build</h2>
     <p class="lede intro" data-reveal>
       Every free meal, free sensor, and free 3 a.m. snack exists because a company decided high
-      schoolers deserve real hardware. These slots are waiting for logos.
+      schoolers deserve real hardware. Scroll the tree — higher tiers sit at the crown.
     </p>
-    {
-      tiers.map((t) => (
-        <div class="tier" data-reveal>
-          <p class="tier-name mono">{t.tier}</p>
-          <div class={`logos logos--${t.size}`}>
-            {Array.from({ length: t.slots }).map(() => (
-              <div class="logo-slot">
-                <span class="mono">YOUR LOGO</span>
-              </div>
-            ))}
+
+    <div class="tier-stack">
+      {
+        tiers.map((t) => (
+          <div class={`tier tier--${t.tone}`} data-reveal>
+            <div class="tier-head">
+              <p class="tier-name mono">{t.tier}</p>
+              <p class="tier-blurb">{t.blurb}</p>
+            </div>
+            <div class={`logos logos--${t.size}`}>
+              {Array.from({ length: t.slots }).map(() => (
+                <a
+                  class="logo-slot"
+                  href={`mailto:${SPONSOR_EMAIL}?subject=Sponsoring Circuit Hacks — ${t.tier}`}
+                  data-hover
+                >
+                  <span class="mono">YOUR LOGO</span>
+                  <span class="slot-hint mono">Claim this slot</span>
+                </a>
+              ))}
+            </div>
           </div>
-        </div>
-      ))
-    }
+        ))
+      }
+    </div>
+
     <div class="sponsor-cta" data-reveal>
-      <a class="btn btn--primary" href={`mailto:${SPONSOR_EMAIL}?subject=Sponsoring the hackathon`}>
+      <a class="btn btn--primary" href={`mailto:${SPONSOR_EMAIL}?subject=Sponsoring Circuit Hacks`}>
         Sponsor the event <span class="arrow">→</span>
       </a>
       <p class="mono note">Prospectus available on request · {SPONSOR_EMAIL}</p>
@@ -41,6 +85,13 @@ const tiers = [
 </section>
 
 <style>
+  /* Tall section so the WebGL tree can climb + spin with scroll */
+  .section--tree {
+    min-height: 220vh;
+    padding-top: clamp(6rem, 12vh, 10rem);
+    padding-bottom: clamp(8rem, 16vh, 14rem);
+  }
+
   h2 {
     margin-bottom: clamp(1.5rem, 3vh, 2.5rem);
   }
@@ -49,54 +100,89 @@ const tiers = [
     margin-bottom: clamp(2.5rem, 5vh, 4rem);
   }
 
-  .tier {
-    margin-bottom: 2.5rem;
+  .tier-stack {
+    display: grid;
+    gap: clamp(2rem, 4vh, 3.2rem);
   }
 
-  .tier:nth-child(1) .tier-name { color: var(--gold); }
-  .tier:nth-child(2) .tier-name { color: var(--blue); }
-  .tier:nth-child(3) .tier-name { color: var(--bronze); }
-
-  .tier-name {
-    font-size: 0.68rem;
-    letter-spacing: 0.32em;
-    text-transform: uppercase;
+  .tier-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.75rem 1.4rem;
     margin-bottom: 1rem;
   }
 
-  .logos {
-    display: grid;
-    gap: 1rem;
+  .tier-name {
+    font-size: 0.72rem;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
   }
 
-  .logos--lg { grid-template-columns: repeat(2, 1fr); }
-  .logos--md { grid-template-columns: repeat(4, 1fr); }
-  .logos--sm { grid-template-columns: repeat(6, 1fr); }
+  .tier-blurb {
+    font-size: 0.88rem;
+    color: var(--ink-dim);
+  }
 
-  .logos--lg .logo-slot { border-color: rgba(230, 181, 74, 0.25); }
-  .logos--md .logo-slot { border-color: rgba(111, 168, 214, 0.25); }
-  .logos--sm .logo-slot { border-color: rgba(189, 133, 80, 0.25); }
+  .tier--partner .tier-name { color: var(--blue); }
+  .tier--gold .tier-name { color: var(--gold); }
+  .tier--silver .tier-name { color: #b8c4d4; }
+  .tier--bronze .tier-name { color: var(--bronze); }
+  .tier--inkind .tier-name { color: #5a7a8a; }
+
+  .logos {
+    display: grid;
+    gap: 0.9rem;
+  }
+
+  .logos--lg { grid-template-columns: repeat(3, 1fr); }
+  .logos--md { grid-template-columns: repeat(4, 1fr); }
+  .logos--sm { grid-template-columns: repeat(5, 1fr); }
+  .logos--xs { grid-template-columns: repeat(6, 1fr); }
+
+  .tier--partner .logo-slot { border-color: rgba(111, 168, 214, 0.35); }
+  .tier--gold .logo-slot { border-color: rgba(230, 181, 74, 0.35); }
+  .tier--silver .logo-slot { border-color: rgba(184, 196, 212, 0.3); }
+  .tier--bronze .logo-slot { border-color: rgba(189, 133, 80, 0.3); }
+  .tier--inkind .logo-slot { border-color: rgba(90, 122, 138, 0.3); }
 
   .logo-slot {
     display: grid;
     place-items: center;
+    gap: 0.35rem;
     border: 1px dashed var(--line-strong);
     border-radius: 12px;
     aspect-ratio: 5 / 2;
-    transition: border-color 0.3s ease, background-color 0.3s ease;
+    text-decoration: none;
+    transition: border-color 0.3s ease, background-color 0.3s ease, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    background: rgba(241, 233, 216, 0.02);
   }
 
-  .logos--lg .logo-slot { aspect-ratio: 4 / 1; }
+  .logos--lg .logo-slot { aspect-ratio: 4 / 1.1; }
 
   .logo-slot:hover {
+    border-style: solid;
     border-color: var(--gold);
-    background: rgba(230, 181, 74, 0.04);
+    background: rgba(230, 181, 74, 0.05);
+    transform: translateY(-2px);
   }
 
   .logo-slot span {
     font-size: 0.6rem;
-    letter-spacing: 0.3em;
+    letter-spacing: 0.28em;
     color: var(--ink-faint);
+  }
+
+  .slot-hint {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    font-size: 0.55rem !important;
+    letter-spacing: 0.18em !important;
+    color: var(--gold) !important;
+  }
+
+  .logo-slot:hover .slot-hint {
+    opacity: 1;
   }
 
   .sponsor-cta {
@@ -113,13 +199,15 @@ const tiers = [
     color: var(--ink-faint);
   }
 
-  @media (max-width: 900px) {
+  @media (max-width: 1000px) {
     .logos--md { grid-template-columns: repeat(2, 1fr); }
     .logos--sm { grid-template-columns: repeat(3, 1fr); }
+    .logos--xs { grid-template-columns: repeat(3, 1fr); }
   }
 
   @media (max-width: 560px) {
     .logos--lg { grid-template-columns: 1fr; }
-    .logos--sm { grid-template-columns: repeat(2, 1fr); }
+    .logos--sm,
+    .logos--xs { grid-template-columns: repeat(2, 1fr); }
   }
 </style>

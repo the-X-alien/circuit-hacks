@@ -10,8 +10,9 @@
   },
   "dependencies": {
     "@astrojs/react": "^4.3.0",
-    "@fontsource-variable/inter": "^5.2.8",
-    "@fontsource-variable/syne": "^5.2.7",
+    "@fontsource/dm-sans": "^5.2.5",
+    "@fontsource/ibm-plex-mono": "^5.2.5",
+    "@fontsource/instrument-serif": "^5.2.5",
     "astro": "^5.12.0",
     "gsap": "^3.13.0",
     "react": "^19.1.0",
@@ -19,9 +20,6 @@
     "three": "^0.178.0"
   },
   "devDependencies": {
-    "@fontsource-variable/bricolage-grotesque": "^5.2.5",
-    "@fontsource-variable/hanken-grotesk": "^5.2.5",
-    "@fontsource/space-mono": "^5.2.5",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "@types/three": "^0.178.0",

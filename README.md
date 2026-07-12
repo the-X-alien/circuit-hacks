@@ -1,6 +1,8 @@
-# SIGNAL://LOST — 24-Hour Hardware Hackathon Site
+# CIRCUIT HACKS — 24-Hour Hardware Hackathon Site
 
 Cinematic single-page site for a free 24-hour high-school hardware hackathon in the Bay Area (late October 2026). Astro + React + Three.js + GSAP, with a continuous WebGL narrative running behind accessible DOM content.
+
+**WebGL chapters:** particle chip morph (hero) → PCB flythrough corridor → liquid metal → crowd → **sponsor tree** (rotating trunk with 3D cards on branches, Cove Hacks–style tiers ascending) → fluid finale.
 
 ## Quick start
 
