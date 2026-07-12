@@ -7,6 +7,7 @@ import { CircuitWorld } from './scenes/CircuitWorld';
 import { LiquidMetal } from './scenes/LiquidMetal';
 import { Crowd } from './scenes/Crowd';
 import { FluidSim } from './scenes/FluidSim';
+import { SponsorTree } from './scenes/SponsorTree';
 
 interface Run {
   key: string;
@@ -24,6 +25,7 @@ const DIM: Record<string, number> = {
   metal: 0.9,
   crowd: 0.62,
   fluid: 1,
+  tree: 0.7,
 };
 
 function signalReady() {
@@ -82,6 +84,7 @@ export default function Experience() {
       metal: new LiquidMetal(),
       crowd: new Crowd(),
       fluid: new FluidSim(),
+      tree: new SponsorTree(),
     };
     const ensureInit = (s: FXScene) => {
       if (!s.initialized) {
@@ -90,7 +93,7 @@ export default function Experience() {
       }
     };
     // Init everything except the fluid solver up front; fluid on idle
-    for (const key of ['morph', 'world', 'metal', 'crowd']) ensureInit(scenes[key]!);
+    for (const key of ['morph', 'world', 'metal', 'crowd', 'tree']) ensureInit(scenes[key]!);
     const idleInit = () => !disposed && ensureInit(scenes.fluid!);
     'requestIdleCallback' in window
       ? requestIdleCallback(idleInit, { timeout: 3000 })

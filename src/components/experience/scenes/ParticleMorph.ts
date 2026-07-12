@@ -218,12 +218,18 @@ export class ParticleMorph extends FXScene {
         }
       `,
       fragmentShader: `
+        uniform float uTime;
         varying float vAlpha;
         void main() {
           vec2 c = gl_PointCoord - 0.5;
           float d = length(c);
           float a = smoothstep(0.5, 0.0, d);
-          gl_FragColor = vec4(0.7, 0.55, 0.25, a * vAlpha * 0.3);
+          float pulse = 0.5 + 0.5 * sin(uTime * 0.8 + c.x * 6.0);
+          vec3 blue = vec3(0.44, 0.66, 0.84);
+          vec3 gold = vec3(0.90, 0.71, 0.29);
+          vec3 bronze = vec3(0.74, 0.52, 0.31);
+          vec3 col = mix(mix(blue, gold, pulse), bronze, 0.3);
+          gl_FragColor = vec4(col, a * vAlpha * 0.3);
         }
       `,
       uniforms: {
@@ -235,6 +241,7 @@ export class ParticleMorph extends FXScene {
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     });
+    this.glowMaterial.uniforms.uTime = { value: 0 };
 
     const glowGeo = new THREE.BufferGeometry();
     const gStart = new Float32Array(glowCount * 3);

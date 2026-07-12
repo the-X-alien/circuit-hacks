@@ -96,9 +96,11 @@ const provided = [
     flex: none;
     border: 1px solid var(--line);
     border-radius: 10px;
-    color: var(--gold);
     background: rgba(230, 181, 74, 0.05);
   }
+
+  .bring-list li:nth-child(odd) .icon { color: var(--gold); border-color: rgba(230, 181, 74, 0.2); }
+  .bring-list li:nth-child(even) .icon { color: var(--blue); border-color: rgba(111, 168, 214, 0.2); }
 
   .item-label {
     font-weight: 550;

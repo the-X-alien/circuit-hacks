@@ -79,8 +79,15 @@ const points = [
     color: var(--ink-faint);
   }
 
+  .card:nth-child(3n+1) .num { color: var(--gold); }
+  .card:nth-child(3n+2) .num { color: var(--blue); }
+  .card:nth-child(3n) .num { color: var(--bronze); }
+
   .contact-line a {
-    color: var(--gold);
+    background: linear-gradient(90deg, var(--blue), var(--gold-bright));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
     text-decoration: none;
   }
 

@@ -80,23 +80,47 @@ export function initSite(): void {
     }
   });
 
-  // ── Fade-up reveals ───────────────────────────────────────────
+  // ── Fade-up reveals with variety ──────────────────────────────
   const reveals = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal]'));
   const heroReveals = reveals.filter((el) => el.closest('#top'));
   const restReveals = reveals.filter((el) => !el.closest('#top'));
 
   ScrollTrigger.batch(restReveals, {
-    start: 'top 90%',
+    start: 'top 89%',
     once: true,
-    onEnter: (batch) =>
+    onEnter: (batch) => {
       gsap.to(batch, {
         opacity: 1,
         y: 0,
         duration: 1.1,
-        stagger: 0.09,
+        stagger: (i) => Math.min(0.06 + i * 0.05, 0.25),
         ease: 'power3.out',
         overwrite: true,
-      }),
+      });
+      // Subtle parallax on section headings
+      batch.forEach((el) => {
+        if (el.matches('h2, .kicker, .display-lg, .display-md')) {
+          gsap.fromTo(el, { scale: 0.96, filter: 'blur(4px)' }, {
+            scale: 1,
+            filter: 'blur(0px)',
+            duration: 1.4,
+            ease: 'power4.out',
+            scrollTrigger: { trigger: el, start: 'top 86%', once: true },
+            overwrite: true,
+          });
+        }
+        // Cards stagger with a slight rotation reveal
+        if (el.matches('.card, .logo-slot')) {
+          gsap.fromTo(el, { rotateX: 6 }, {
+            rotateX: 0,
+            duration: 1.2,
+            ease: 'power3.out',
+            scrollTrigger: { trigger: el, start: 'top 88%', once: true },
+            overwrite: true,
+          });
+        }
+      });
+    },
   });
 
   // ── Hero entrance, released by the preloader ──────────────────
@@ -106,10 +130,17 @@ export function initSite(): void {
       opacity: 1,
       y: 0,
       duration: 1.2,
-      stagger: 0.12,
+      stagger: (i) => 0.08 + i * 0.06,
       delay: 0.35,
       ease: 'power3.out',
     });
+    // Hero kicker entrance from above
+    const kicker = document.querySelector('#top .kicker');
+    if (kicker) {
+      gsap.fromTo(kicker, { y: -20, opacity: 0 }, {
+        y: 0, opacity: 1, duration: 0.8, delay: 0.1, ease: 'power2.out',
+      });
+    }
   };
   window.addEventListener('site:enter', enterHero, { once: true });
 

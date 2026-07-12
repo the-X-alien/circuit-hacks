@@ -15,7 +15,12 @@ void main() {
   // Traveling energy wave along the floor
   float wave = sin(dist * 0.14 - uTime * 1.6) * 0.5 + 0.5;
 
-  vec3 col = mix(vec3(0.16, 0.38, 0.52), vec3(0.45, 0.30, 0.13), clamp(vWorld.z * -0.004, 0.0, 1.0));
+  // Blue → Gold → Bronze gradient across the floor
+  vec3 blue = vec3(0.44, 0.66, 0.84);
+  vec3 gold = vec3(0.90, 0.71, 0.29);
+  vec3 bronze = vec3(0.74, 0.52, 0.31);
+  float grad = clamp(vWorld.z * -0.004, 0.0, 1.0);
+  vec3 col = mix(mix(blue, gold, grad * 2.0), bronze, max(0.0, grad * 3.0 - 1.0));
   col *= line * fade * (0.55 + 0.9 * wave) * uBrightness;
 
   gl_FragColor = vec4(col, 1.0);

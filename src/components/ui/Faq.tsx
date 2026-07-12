@@ -104,7 +104,10 @@ export default function Faq() {
           transition: color 0.3s ease;
         }
         .faq-q:hover .faq-text {
-          color: var(--gold);
+          background: linear-gradient(90deg, var(--blue), var(--gold-bright));
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent;
         }
         .faq-num {
           font-family: var(--font-mono);

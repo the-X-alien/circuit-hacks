@@ -9,7 +9,7 @@ const tiers = [
 ];
 ---
 
-<section id="sponsors" class="section sponsors" data-scene="crowd">
+<section id="sponsors" class="section sponsors" data-scene="tree">
   <div class="scrim">
     <p class="kicker">08 — The Backers</p>
     <h2 class="display-lg" data-split>Powered by<br />people who build</h2>
@@ -53,11 +53,14 @@ const tiers = [
     margin-bottom: 2.5rem;
   }
 
+  .tier:nth-child(1) .tier-name { color: var(--gold); }
+  .tier:nth-child(2) .tier-name { color: var(--blue); }
+  .tier:nth-child(3) .tier-name { color: var(--bronze); }
+
   .tier-name {
     font-size: 0.68rem;
     letter-spacing: 0.32em;
     text-transform: uppercase;
-    color: var(--ink-faint);
     margin-bottom: 1rem;
   }
 
@@ -69,6 +72,10 @@ const tiers = [
   .logos--lg { grid-template-columns: repeat(2, 1fr); }
   .logos--md { grid-template-columns: repeat(4, 1fr); }
   .logos--sm { grid-template-columns: repeat(6, 1fr); }
+
+  .logos--lg .logo-slot { border-color: rgba(230, 181, 74, 0.25); }
+  .logos--md .logo-slot { border-color: rgba(111, 168, 214, 0.25); }
+  .logos--sm .logo-slot { border-color: rgba(189, 133, 80, 0.25); }
 
   .logo-slot {
     display: grid;

@@ -1,80 +1,84 @@
 uniform float uTime;
 uniform vec3 uCam;
+uniform sampler2D uPcbTex;
 
 varying vec3 vWorld;
 
-float hash21(vec2 p) {
-  p = fract(p * vec2(123.34, 345.45));
-  p += dot(p, p + 34.345);
-  return fract(p.x * p.y);
+float hash(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
 }
 
-float sdSeg(vec2 p, vec2 a, vec2 b) {
-  vec2 pa = p - a;
-  vec2 ba = b - a;
-  float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
-  return length(pa - ba * h);
+// Simplex-like noise for heat shimmer
+float gnoise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  float a = hash(i);
+  float b = hash(i + vec2(1.0, 0.0));
+  float c = hash(i + vec2(0.0, 1.0));
+  float d = hash(i + vec2(1.0, 1.0));
+  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
 }
 
 void main() {
+  vec2 uv = vWorld.xz / vec2(900.0, 1000.0) + 0.5;
+  vec3 col = texture2D(uPcbTex, uv).rgb;
+
+  // ── Heat shimmer (subtle distortion near hot components) ────
+  float heat = gnoise(vWorld.xz * 0.04 + uTime * 0.15);
+  float shimmer = heat * 0.03;
+  vec2 shUv = uv + vec2(shimmer, shimmer * 0.5);
+  col = mix(col, texture2D(uPcbTex, shUv).rgb, 0.15);
+
+  // ── Animated current pulse overlay ──────────────────────────
   vec2 p = vWorld.xz;
+  float flow1 = 0.5 + 0.5 * sin((p.x + p.y) * 0.08 - uTime * 2.0);
+  float pulse1 = pow(flow1, 8.0);
+  vec3 gold = vec3(0.90, 0.71, 0.29);
+  vec3 blue = vec3(0.44, 0.66, 0.84);
+  col += gold * pulse1 * 0.15;
 
-  // ── Substrate: deep blue FR4 with a faint speckle ───────────
-  float speck = hash21(floor(p * 1.3));
-  vec3 base = mix(vec3(0.025, 0.06, 0.10), vec3(0.04, 0.10, 0.15), speck);
-  // gentle large-scale tone variation so the board isn't flat
-  base *= 0.85 + 0.3 * hash21(floor(p * 0.18));
+  float flow2 = 0.5 + 0.5 * sin((p.x * 1.3 - p.y * 0.7) * 0.06 + uTime * 1.5);
+  float pulse2 = pow(flow2, 6.0);
+  col += blue * pulse2 * 0.10;
 
-  // ── Traces, routed per cell ─────────────────────────────────
-  float C = 2.4;
-  vec2 cell = floor(p / C);
-  vec2 pf = p - (cell + 0.5) * C; // centered local coords, ~[-C/2, C/2]
+  // Third flow — gold/bronze cross-hatch
+  float flow3 = 0.5 + 0.5 * sin((p.x * 2.1 + p.y * 1.3) * 0.035 - uTime * 1.2);
+  float pulse3 = pow(flow3, 12.0);
+  vec3 bronze = vec3(0.74, 0.52, 0.31);
+  col += bronze * pulse3 * 0.08;
 
-  float h1 = hash21(cell + 11.1);
-  float h2 = hash21(cell + 27.3);
-  float h3 = hash21(cell + 53.7);
-  float w = 0.07 * C; // trace half-width
+  // Spark dots at pulse peaks
+  float spark = smoothstep(0.92, 0.98, flow1) +
+                smoothstep(0.94, 0.99, flow2) +
+                smoothstep(0.96, 0.99, flow3);
+  col += vec3(0.95, 0.85, 0.60) * spark * 0.12;
 
-  float d = 1e9;
-  // primary axis line through the cell
-  d = min(d, (h1 < 0.5 ? abs(pf.y) : abs(pf.x)) - w);
-  // an L-bend reaching a different edge
-  if (h2 < 0.5) {
-    d = min(d, sdSeg(pf, vec2(0.0), vec2(0.0, C * 0.5)) - w);
-    d = min(d, sdSeg(pf, vec2(0.0, C * 0.5), vec2(h3 < 0.5 ? C * 0.5 : -C * 0.5, C * 0.5)) - w);
-  } else {
-    d = min(d, sdSeg(pf, vec2(0.0), vec2(C * 0.5, 0.0)) - w);
-    d = min(d, sdSeg(pf, vec2(C * 0.5, 0.0), vec2(C * 0.5, h3 < 0.5 ? C * 0.5 : -C * 0.5)) - w);
-  }
+  // ── Trace edge glow ─────────────────────────────────────────
+  float traceMask = texture2D(uPcbTex, uv + vec2(0.001, 0.0)).r * 0.5 +
+                    texture2D(uPcbTex, uv - vec2(0.001, 0.0)).r * 0.5;
+  float traceEdge = abs(traceMask - texture2D(uPcbTex, uv).r);
+  col += vec3(0.95, 0.75, 0.35) * traceEdge * 0.08;
 
-  float trace = smoothstep(w * 1.9, 0.0, d);
+  // ── Copper trace shimmer along camera direction ─────────────
+  vec2 camDir = normalize(uCam.xz - vWorld.xz);
+  float traceShift = texture2D(uPcbTex, uv + camDir * 0.002).r;
+  col += vec3(0.90, 0.65, 0.25) * abs(traceShift - texture2D(uPcbTex, uv).r) * 0.06;
 
-  // ── Current pulse travelling along the copper ───────────────
-  float flow = 0.5 + 0.5 * sin((p.x + p.y) * 0.5 - uTime * 2.6);
-  float pulse = pow(flow, 3.0);
+  // ── Sub-surface scattering approximation ────────────────────
+  vec3 subsurface = vec3(0.02, 0.06, 0.01);
+  col += subsurface * 0.05;
 
-  vec3 gold = vec3(0.92, 0.72, 0.30);
-  vec3 col = base;
-  col += gold * trace * (0.35 + 0.85 * pulse);
-
-  // ── Pads + vias at cell nodes ───────────────────────────────
-  float padH = hash21(cell + 91.2);
-  if (padH < 0.55) {
-    float r = length(pf);
-    float ring = smoothstep(0.20 * C, 0.18 * C, abs(r - 0.17 * C));
-    float dot = smoothstep(0.075 * C, 0.05 * C, r);
-    col += gold * (ring * 0.7 + dot * 0.9);
-  }
-
-  // ── Soft silk-screen grid for scale ─────────────────────────
-  vec2 g = abs(fract(p / (C * 5.0)) - 0.5) / fwidth(p / (C * 5.0));
-  float gl = 1.0 - min(min(g.x, g.y), 1.0);
-  col += vec3(0.10, 0.16, 0.22) * gl * 0.25;
-
-  // ── Distance fade into atmosphere ───────────────────────────
+  // ── Distance fade ───────────────────────────────────────────
   float dist = distance(vWorld.xz, uCam.xz);
-  float fade = exp(-dist * 0.016);
-  col = mix(vec3(0.018, 0.022, 0.032), col, fade);
+  float fade = exp(-dist * 0.012);
+  col = mix(vec3(0.02, 0.02, 0.03), col, fade);
+
+  // ── Slight AO at board edges ────────────────────────────────
+  float edgeDist = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y)) * 5.0;
+  col *= 1.0 - 0.3 * exp(-edgeDist * 3.0);
 
   gl_FragColor = vec4(col, 1.0);
 }

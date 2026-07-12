@@ -109,15 +109,23 @@ const days = [
   }
 
   .slot--hot .slot-label {
-    color: var(--gold);
+    background: linear-gradient(90deg, var(--blue), var(--gold-bright) 60%, var(--bronze));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
     font-family: var(--font-mono);
     letter-spacing: 0.14em;
     font-size: 0.85rem;
   }
 
   .slot--hot .time {
-    color: var(--gold);
+    background: linear-gradient(180deg, var(--blue), var(--gold-bright));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
+
+  .slot:hover .slot-label { color: var(--blue); }
 
   .fineprint {
     margin-top: 3rem;

@@ -17,8 +17,8 @@
   --blue-deep: #2f5e8f;
   --glow: rgba(230, 181, 74, 0.32);
 
-  --font-display: 'Bricolage Grotesque Variable', 'Bricolage Grotesque', sans-serif;
-  --font-body: 'Hanken Grotesk Variable', 'Hanken Grotesk', system-ui, sans-serif;
+  --font-display: 'Syne Variable', 'Syne', sans-serif;
+  --font-body: 'Inter Variable', 'Inter', system-ui, sans-serif;
   --font-mono: 'Space Mono', ui-monospace, 'SF Mono', monospace;
 
   --pad: clamp(1.25rem, 4vw, 4rem);
@@ -142,7 +142,10 @@ h3 {
   font-weight: 400;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-  color: var(--gold);
+  background: linear-gradient(90deg, var(--blue), var(--gold-bright) 60%, transparent 85%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
   display: flex;
   align-items: center;
   gap: 0.9em;
@@ -153,7 +156,7 @@ h3 {
   content: '';
   width: 2.2em;
   height: 1px;
-  background: linear-gradient(90deg, var(--gold), transparent);
+  background: linear-gradient(90deg, var(--blue), var(--gold-bright), transparent);
   flex: none;
 }
 
@@ -172,7 +175,28 @@ h3 {
 }
 
 .accent {
-  background: linear-gradient(100deg, var(--gold-bright), var(--bronze) 52%, var(--blue) 100%);
+  background: linear-gradient(100deg, var(--blue), var(--gold-bright) 50%, var(--bronze) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.accent-blue {
+  background: linear-gradient(100deg, var(--blue), var(--blue-deep));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.accent-gold {
+  background: linear-gradient(100deg, var(--gold-bright), var(--gold-deep));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.accent-bronze {
+  background: linear-gradient(100deg, var(--bronze), var(--bronze-deep));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
