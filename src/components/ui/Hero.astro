@@ -7,6 +7,9 @@ import {
   RSVP_URL,
   TAGLINE,
 } from '~/config';
+
+const chars = EVENT_NAME.split('');
+const half = Math.floor(chars.length / 2);
 ---
 
 <section id="top" class="section section--full hero" data-scene="morph">
@@ -18,12 +21,21 @@ import {
       <span class="dot" aria-hidden="true"></span>
       <span>HIGH SCHOOL HARDWARE HACKATHON</span>
     </p>
-    <h1 class="display-xl" data-split><span class="accent">{EVENT_NAME}</span></h1>
+    <h1 class="display-xl" data-hero-title>
+      <span class="accent" data-hero-chars>
+        {chars.map((ch, i) => (
+          <span class="hero-char" data-i={i} style={`--i: ${i}; --mid: ${Math.abs(i - half)}`}>
+            {ch === ' ' ? '\u00A0' : ch}
+          </span>
+        ))}
+      </span>
+    </h1>
     <p class="lede hero-lede" data-reveal>
-      {TAGLINE} One secret track, sealed until the doors open. Build something that exists — then
+      <span class="accent-gold">{TAGLINE}</span> One secret track, sealed until the doors open. Build something that exists — then
       make it blink, move, and think.
     </p>
     <div class="hero-cta" data-reveal>
+      <div class="cta-glow" aria-hidden="true"></div>
       <a class="btn btn--primary" href={RSVP_URL} target="_blank" rel="noopener">
         Claim your spot <span class="arrow">→</span>
       </a>
@@ -35,6 +47,46 @@ import {
     <span class="scroll-line"></span>
   </div>
 </section>
+
+<script>
+  import { gsap } from 'gsap';
+  import { bus } from '~/lib/bus';
+
+  const title = document.querySelector('[data-hero-chars]');
+  if (title) {
+    const chars = title.querySelectorAll<HTMLElement>('.hero-char');
+
+    // Staggered entrance
+    gsap.set(chars, { opacity: 0, y: 40, rotateX: -30 });
+    const enter = () => {
+      gsap.to(chars, {
+        opacity: 1,
+        y: 0,
+        rotateX: 0,
+        duration: 0.8,
+        stagger: 0.035,
+        ease: 'power3.out',
+        delay: 0.3,
+      });
+    };
+    window.addEventListener('site:enter', enter, { once: true });
+
+    // Focus-driven middle fade
+    const loop = () => {
+      const focus = bus.focus;
+      const half = Math.floor(chars.length / 2);
+      chars.forEach((ch) => {
+        const i = parseInt(ch.dataset.i ?? '0');
+        const dist = Math.abs(i - half);
+        const midWeight = 1 - dist / half;
+        const opacity = 1 - midWeight * focus * 0.85;
+        ch.style.opacity = String(opacity);
+      });
+      requestAnimationFrame(loop);
+    };
+    loop();
+  }
+</script>
 
 <style>
   .hero {
@@ -52,6 +104,13 @@ import {
     margin-bottom: clamp(1.5rem, 3vh, 2.5rem);
   }
 
+  .hero-meta > span:not(.dot) {
+    border: 1px solid rgba(111, 168, 214, 0.12);
+    background: rgba(111, 168, 214, 0.04);
+    padding: 0.1rem 0.6rem;
+    border-radius: 4px;
+  }
+
   .dot {
     width: 4px;
     height: 4px;
@@ -64,14 +123,28 @@ import {
     margin-bottom: clamp(1.5rem, 3.5vh, 3rem);
   }
 
+  .hero-char {
+    display: inline-block;
+    transition: opacity 0.15s ease;
+    will-change: opacity;
+  }
+
   .hero-lede {
     margin-bottom: clamp(2rem, 4.5vh, 3.4rem);
   }
 
   .hero-cta {
+    position: relative;
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;
+  }
+
+  .cta-glow {
+    position: absolute;
+    inset: -3rem -2rem;
+    background: radial-gradient(50% 60% at 30% 40%, rgba(230, 181, 74, 0.08), transparent);
+    pointer-events: none;
   }
 
   .hero-scroll {

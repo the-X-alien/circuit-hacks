@@ -5,6 +5,8 @@ export interface SiteBus {
   /** Current (smoothed, if ScrollSmoother is active) scroll offset in px. */
   getScroll: () => number;
   pointer: { x: number; y: number; nx: number; ny: number };
+  /** 0 = pointer far from hero circuit center, 1 = dead center */
+  focus: number;
   reduced: boolean;
   lite: boolean;
   ready: boolean;
@@ -15,6 +17,7 @@ const g = globalThis as typeof globalThis & { __siteBus?: SiteBus };
 export const bus: SiteBus = (g.__siteBus ??= {
   getScroll: () => (typeof window === 'undefined' ? 0 : window.scrollY),
   pointer: { x: 0, y: 0, nx: 0, ny: 0 },
+  focus: 0,
   reduced: false,
   lite: false,
   ready: false,

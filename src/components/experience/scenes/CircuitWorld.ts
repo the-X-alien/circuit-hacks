@@ -3,23 +3,21 @@ import { FXScene, type UpdateArgs } from '../FXSceneManager';
 import pcbVert from '../shaders/pcb.vert.glsl';
 import pcbFrag from '../shaders/pcb.frag.glsl';
 
-const CORRIDOR = 420;
-const BOARD_W = 900;
-const BOARD_D = 1000;
+const CORRIDOR = 600;
+const BOARD_W = 300;
+const BOARD_D = 900;
 
 function generatePCBTexture(): THREE.CanvasTexture {
-  const W = 2048;
+  const W = 1024;
   const H = 2048;
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext('2d')!;
 
-  // FR4 substrate
   ctx.fillStyle = '#1B5E20';
   ctx.fillRect(0, 0, W, H);
 
-  // Subtle fiberglass weave
   ctx.fillStyle = 'rgba(27, 94, 32, 0.3)';
   for (let y = 0; y < H; y += 3) {
     for (let x = 0; x < W; x += 3) {
@@ -29,298 +27,46 @@ function generatePCBTexture(): THREE.CanvasTexture {
     }
   }
 
-  // Solder mask tint
   ctx.fillStyle = 'rgba(46, 125, 50, 0.25)';
   ctx.fillRect(0, 0, W, H);
 
-  const CX = W / 2;
-  const CZ = H / 3;
-
-  // Helper: draw L-shaped copper trace
-  function trace(
-    x1: number,
-    y1: number,
-    x2: number,
-    y2: number,
-    w: number,
-    color = '#B87333'
-  ) {
-    ctx.strokeStyle = color;
-    ctx.lineWidth = w;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    // L-shape: horizontal then vertical (or vice versa)
-    if (Math.random() > 0.5) {
-      ctx.lineTo(x2, y1);
-      ctx.lineTo(x2, y2);
-    } else {
-      ctx.lineTo(x1, y2);
-      ctx.lineTo(x2, y2);
-    }
-    ctx.stroke();
-
-    // Subtle highlight on one side for copper shimmer
-    ctx.strokeStyle = 'rgba(184, 115, 51, 0.15)';
-    ctx.lineWidth = w * 0.3;
-    ctx.beginPath();
-    ctx.moveTo(x1 + 1, y1 + 1);
-    if (Math.random() > 0.5) {
-      ctx.lineTo(x2 + 1, y1 + 1);
-      ctx.lineTo(x2 + 1, y2 + 1);
-    } else {
-      ctx.lineTo(x1 + 1, y2 + 1);
-      ctx.lineTo(x2 + 1, y2 + 1);
-    }
-    ctx.stroke();
-  }
-
-  // Helper: draw gold pad
-  function goldPad(cx: number, cy: number, w: number, h: number) {
-    ctx.fillStyle = '#F5D061';
-    ctx.beginPath();
-    ctx.roundRect(cx - w / 2, cy - h / 2, w, h, 1);
-    ctx.fill();
-    // highlight
-    ctx.fillStyle = 'rgba(255, 255, 220, 0.3)';
-    ctx.beginPath();
-    ctx.roundRect(cx - w / 2 + 1, cy - h / 2 + 1, w * 0.4, h * 0.3, 1);
-    ctx.fill();
-  }
-
-  // Helper: gold via
-  function via(cx: number, cy: number, r: number) {
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fillStyle = '#F5D061';
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(cx, cy, r * 0.4, 0, Math.PI * 2);
-    ctx.fillStyle = '#0A0A0A';
-    ctx.fill();
-  }
-
-  // Helper: silkscreen text
-  function silk(text: string, x: number, y: number, size = 14) {
-    ctx.fillStyle = '#F5F5F0';
-    ctx.font = `${size}px monospace`;
-    ctx.fillText(text, x, y);
-  }
-
-  // Helper: rectangular pad group (QFP footprint)
-  function qfpFootprint(cx: number, cy: number, size: number, pinCount: number) {
-    const pitch = size / (pinCount - 1);
-    const padW = 2;
-    const padH = 8;
-    // Top row
-    for (let i = 0; i < pinCount; i++) {
-      const x = cx - size / 2 + i * pitch;
-      goldPad(x, cy - size / 2 - 4, padW, padH);
-    }
-    // Bottom row
-    for (let i = 0; i < pinCount; i++) {
-      const x = cx - size / 2 + i * pitch;
-      goldPad(x, cy + size / 2 + 4, padW, padH);
-    }
-    // Left row
-    for (let i = 0; i < pinCount; i++) {
-      const y = cy - size / 2 + i * pitch;
-      goldPad(cx - size / 2 - 4, y, padH, padW);
-    }
-    // Right row
-    for (let i = 0; i < pinCount; i++) {
-      const y = cy - size / 2 + i * pitch;
-      goldPad(cx + size / 2 + 4, y, padH, padW);
-    }
-    // Thermal pad in center
-    ctx.fillStyle = '#F5D061';
-    ctx.fillRect(cx - size * 0.25, cy - size * 0.25, size * 0.5, size * 0.5);
-    // Silkscreen outline
-    ctx.strokeStyle = '#F5F5F0';
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(cx - size / 2 - 3, cy - size / 2 - 3, size + 6, size + 6);
-    // Pin-1 dot
-    ctx.beginPath();
-    ctx.arc(cx - size / 2 - 2, cy - size / 2 - 2, 2, 0, Math.PI * 2);
-    ctx.fillStyle = '#F5F5F0';
-    ctx.fill();
-  }
-
-  // ── Edge connector (gold fingers along bottom edge) ────────
-  const fingerCount = 48;
-  const fingerPitch = 14;
-  const fingerStartX = CX - (fingerCount * fingerPitch) / 2;
-  for (let i = 0; i < fingerCount; i++) {
-    const fx = fingerStartX + i * fingerPitch;
-    ctx.beginPath();
-    ctx.moveTo(fx, H - 8);
-    ctx.lineTo(fx + 6, H - 8);
-    ctx.lineTo(fx + 5, H);
-    ctx.lineTo(fx + 1, H);
-    ctx.closePath();
-    ctx.fillStyle = '#D4AF37';
-    ctx.fill();
-    // chamfer highlight
-    ctx.fillStyle = 'rgba(255, 255, 200, 0.2)';
-    ctx.beginPath();
-    ctx.moveTo(fx + 1, H - 7);
-    ctx.lineTo(fx + 5, H - 7);
-    ctx.lineTo(fx + 4, H - 1);
-    ctx.lineTo(fx + 2, H - 1);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  // Silkscreen edge connector label
-  silk('J1', CX - 10, H - 20, 16);
-
-  // ── QFP footprints (large ICs) ──────────────────────────────
-  const qfpPositions = [
-    { x: CX - 160, z: CZ - 80 },
-    { x: CX + 140, z: CZ + 60 },
-    { x: CX - 100, z: CZ + 200 },
-    { x: CX + 60, z: CZ - 160 },
-    { x: CX - 50, z: CZ - 240 },
-    { x: CX + 160, z: CZ + 240 },
-  ];
-  for (let qi = 0; qi < qfpPositions.length; qi++) {
-    const q = qfpPositions[qi]!;
-    qfpFootprint(q.x, q.z - 120, 50, 12);
-    silk(`U${qi + 1}`, q.x - 15, q.z - 120 - 20);
-  }
-
-  // ── Smaller SOIC footprints ─────────────────────────────────
-  const soicPositions = [
-    { x: CX + 200, z: CZ - 50 },
-    { x: CX - 200, z: CZ + 100 },
-    { x: CX + 100, z: CZ - 280 },
-    { x: CX - 140, z: CZ + 300 },
-    { x: CX + 240, z: CZ - 200 },
-  ];
-  let chipIndex = qfpPositions.length + 1;
-  for (let si = 0; si < soicPositions.length; si++) {
-    const s = soicPositions[si]!;
-    const scx = s.x;
-    const scy = s.z - 120;
-    const pitch = 8;
-    const count = 8;
-    for (let i = 0; i < count; i++) {
-      goldPad(scx - ((count - 1) * pitch) / 2 + i * pitch, scy - 10, 3, 6);
-      goldPad(scx - ((count - 1) * pitch) / 2 + i * pitch, scy + 10, 3, 6);
-    }
-    ctx.strokeStyle = '#F5F5F0';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(scx - 16, scy - 8, 32, 16);
-    silk(`U${chipIndex + si}`, scx - 12, scy + 20);
-  }
-
-  // ── Dense trace routing ─────────────────────────────────────
-  const traceWidth = 2.5;
-
-  // Power distribution traces (thick)
-  const powerTraces = [
-    { x1: 0, y1: H / 2, x2: CX - 180, y2: CZ + 60 },
-    { x1: W, y1: H / 2 - 100, x2: CX + 180, y2: CZ - 80 },
-  ];
-  for (const t of powerTraces) {
-    trace(t.x1, t.y1, t.x2, t.y2, traceWidth * 3, 'rgba(184, 115, 51, 0.5)');
-  }
-
-  // Traces between QFPs (signal routing)
-  for (let i = 0; i < qfpPositions.length; i++) {
-    for (let j = i + 1; j < qfpPositions.length; j++) {
-      if (Math.random() > 0.45) continue;
-      const a = qfpPositions[i]!;
-      const b = qfpPositions[j]!;
-      trace(a.x, a.z - 120, b.x, b.z - 120, traceWidth, '#B87333');
-    }
-  }
-
-  // Traces from QFPs to edge connector
-  for (let i = 0; i < Math.min(qfpPositions.length, 20); i++) {
-    const q = qfpPositions[i % qfpPositions.length]!;
-    const fingerX = fingerStartX + (i * 3) * fingerPitch + 3;
-    trace(q.x + 10, q.z - 120 + 10, fingerX, H - 20, traceWidth * 0.8);
-  }
-
-  // Random L-shaped data traces
-  for (let i = 0; i < 120; i++) {
-    const x1 = 40 + Math.random() * (W - 80);
-    const y1 = 40 + Math.random() * (H - 80);
-    const x2 = 40 + Math.random() * (W - 80);
-    const y2 = 40 + Math.random() * (H - 80);
-    trace(x1, y1, x2, y2, 1.0 + Math.random() * 1.5, '#B87333');
-  }
-
-  // ── Vias scattered around ───────────────────────────────────
-  for (let i = 0; i < 160; i++) {
-    const vx = 20 + Math.random() * (W - 40);
-    const vy = 20 + Math.random() * (H - 40);
-    via(vx, vy, 4 + Math.random() * 3);
-  }
-
-  // ── SOIC pads (small ICs, 8-pin) ───────────────────────────
-  for (let si = 0; si < 12; si++) {
-    const scx = 60 + Math.random() * (W - 120);
-    const scy = 60 + Math.random() * (H - 120);
-    const pitch = 10;
-    const count = 4;
-    for (let i = 0; i < count; i++) {
-      goldPad(scx - ((count - 1) * pitch) / 2 + i * pitch, scy - 6, 3, 8);
-      goldPad(scx - ((count - 1) * pitch) / 2 + i * pitch, scy + 6, 3, 8);
-    }
-    ctx.strokeStyle = '#F5F5F0';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(scx - 12, scy - 5, 24, 10);
-  }
-
-  // ── Capacitor footprints (cylindrical, two pads) ────────────
-  for (let ci = 0; ci < 50; ci++) {
-    const ccx = 30 + Math.random() * (W - 60);
-    const ccy = 30 + Math.random() * (H - 60);
-    goldPad(ccx - 5, ccy, 4, 4);
-    goldPad(ccx + 5, ccy, 4, 4);
-    // Polarity marking (+)
-    ctx.fillStyle = '#F5F5F0';
-    ctx.font = '10px monospace';
-    ctx.fillText('+', ccx - 5, ccy - 8);
-  }
-
-  // ── Silkscreen labels scattered ────────────────────────────
-  const labels = [
-    'GND', 'VCC', '3.3V', '5V', 'RESET', 'SCL', 'SDA',
-    'R1', 'R2', 'R3', 'C1', 'C2', 'C3',
-    'D1', 'D2', 'LED1', 'LED2',
-    'J1', 'J2', 'J3',
-    'SIG_IN', 'SIG_OUT',
-    'REV 1.0', 'DATE: 2026',
-    'ESD WARNING',
-    'HIGH SCHOOL HARDWARE',
-  ];
-  for (const label of labels) {
-    const lx = 20 + Math.random() * (W - 100);
-    const ly = 20 + Math.random() * (H - 40);
-    silk(label, lx, ly, 10 + Math.random() * 6);
-  }
-
-  // ── Board outline ───────────────────────────────────────────
-  ctx.strokeStyle = '#F5F5F0';
+  // Traces running along corridor direction (vertical in texture)
+  ctx.strokeStyle = '#B87333';
   ctx.lineWidth = 2;
-  ctx.strokeRect(4, 4, W - 8, H - 8);
+  for (let i = 0; i < 80; i++) {
+    const x = 20 + Math.random() * (W - 40);
+    const y1 = Math.random() * H;
+    const y2 = y1 + 40 + Math.random() * 200;
+    ctx.globalAlpha = 0.4 + Math.random() * 0.4;
+    ctx.beginPath();
+    ctx.moveTo(x, y1);
+    ctx.lineTo(x + (Math.random() - 0.5) * 20, y1 + (y2 - y1) * 0.5);
+    ctx.lineTo(x + (Math.random() - 0.5) * 20, y2);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
 
-  // Corner mounting holes
-  const holes = [[12, 12], [W - 12, 12], [12, H - 12], [W - 12, H - 12]];
-  for (const [hx, hy] of holes) {
-    ctx.beginPath();
-    ctx.arc(hx, hy, 5, 0, Math.PI * 2);
+  // Gold pads
+  for (let i = 0; i < 120; i++) {
+    const x = 30 + Math.random() * (W - 60);
+    const y = 30 + Math.random() * (H - 60);
     ctx.fillStyle = '#F5D061';
-    ctx.fill();
     ctx.beginPath();
-    ctx.arc(hx, hy, 2.5, 0, Math.PI * 2);
-    ctx.fillStyle = '#0A0A0A';
+    ctx.arc(x, y, 3 + Math.random() * 4, 0, Math.PI * 2);
     ctx.fill();
   }
+
+  // Silkscreen labels along corridor
+  ctx.fillStyle = '#F5F5F0';
+  ctx.font = '12px monospace';
+  const labels = ['GND', 'VCC', '3.3V', 'SIG', 'CLK', 'DATA', 'RST', 'RX', 'TX', 'PWR'];
+  for (let i = 0; i < 40; i++) {
+    const x = 10 + Math.random() * (W - 60);
+    const y = 20 + Math.random() * (H - 40);
+    ctx.globalAlpha = 0.2 + Math.random() * 0.3;
+    ctx.fillText(labels[Math.floor(Math.random() * labels.length)]!, x, y);
+  }
+  ctx.globalAlpha = 1;
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
@@ -332,19 +78,18 @@ function generatePCBTexture(): THREE.CanvasTexture {
 export class CircuitWorld extends FXScene {
   private boardMat!: THREE.ShaderMaterial;
   private pcbTex!: THREE.CanvasTexture;
-  private chips: THREE.InstancedMesh[] = [];
-  private caps: THREE.InstancedMesh[] = [];
-  private ledMat!: THREE.MeshBasicMaterial;
-  private leds!: THREE.InstancedMesh;
-  private sparks!: THREE.Points;
+  private chips: THREE.Mesh[] = [];
+  private caps: THREE.Mesh[] = [];
+  private towers: THREE.Mesh[] = [];
+  private sparkParticles!: THREE.Points;
+  private glowParticles!: THREE.Points;
   private smoothedP = 0;
 
   override init(renderer: THREE.WebGLRenderer, lite: boolean): void {
     super.init(renderer, lite);
-    this.camera.far = 600;
+    this.camera.far = 800;
     this.camera.updateProjectionMatrix();
 
-    // ── Generate realistic PCB canvas texture ─────────────────
     this.pcbTex = generatePCBTexture();
 
     this.boardMat = new THREE.ShaderMaterial({
@@ -356,306 +101,266 @@ export class CircuitWorld extends FXScene {
         uPcbTex: { value: this.pcbTex },
       },
     });
-    const board = new THREE.Mesh(new THREE.PlaneGeometry(BOARD_W, BOARD_D), this.boardMat);
+    const board = new THREE.Mesh(
+      new THREE.PlaneGeometry(BOARD_W, BOARD_D),
+      this.boardMat
+    );
     board.rotation.x = -Math.PI / 2;
-    board.position.z = -CORRIDOR / 2;
-    board.position.y = -0.2;
+    board.position.set(0, -0.5, -CORRIDOR / 2);
     this.scene.add(board);
 
-    const rand = (a: number, b: number) => a + Math.random() * (b - a);
+    const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 
-    // Canvas pixel to world coordinate mapping
-    const canvasToWorld = (
-      cx: number,
-      cy: number
-    ): { x: number; z: number } => ({
-      x: ((cx / 2048) - 0.5) * 900,
-      z: ((cy / 2048) - 0.5) * 1000,
+    // ── Chip towers (tall QFP-like blocks along corridor) ────
+    const towerCount = lite ? 20 : 60;
+    const chipMat = new THREE.MeshStandardMaterial({
+      color: 0x0a0f16,
+      metalness: 0.3,
+      roughness: 0.6,
     });
+    const pinMat = new THREE.MeshBasicMaterial({ color: 0xf5d061 });
+    for (let i = 0; i < towerCount; i++) {
+      const x = rnd(-BOARD_W * 0.4, BOARD_W * 0.4);
+      const z = rnd(-CORRIDOR + 50, -50);
+      const w = rnd(1.5, 4.0);
+      const d = rnd(1.5, 4.0);
+      const h = rnd(0.3, 2.0);
 
-    // ── QFP chips (black die + visible pins) ──────────────────
-    const chipCanvasPositions = [
-      { x: 1024 - 160, y: 683 - 80 },
-      { x: 1024 + 140, y: 683 + 60 },
-      { x: 1024 - 100, y: 683 + 200 },
-      { x: 1024 + 60, y: 683 - 160 },
-      { x: 1024 - 50, y: 683 - 240 },
-      { x: 1024 + 160, y: 683 + 240 },
-    ];
-    const chipPositions = chipCanvasPositions.map((c) => canvasToWorld(c.x, c.y));
-    const chipCount = lite ? chipPositions.length : chipPositions.length;
-
-    for (let ci = 0; ci < chipCount; ci++) {
-      const cp = chipPositions[ci]!;
-      const sx = rand(2.0, 3.0);
-      const sz = rand(2.0, 3.0);
-      const sy = rand(0.4, 0.8);
-
-      // Black die
-      const chipMesh = new THREE.InstancedMesh(
-        new THREE.BoxGeometry(1, 1, 1),
-        new THREE.MeshStandardMaterial({
-          color: 0x0a0f16,
-          metalness: 0.2,
-          roughness: 0.7,
-        }),
-        1
+      const chip = new THREE.Mesh(
+        new THREE.BoxGeometry(w, h, d),
+        chipMat
       );
-      const m = new THREE.Matrix4();
-      m.makeScale(sx, sy, sz);
-      m.setPosition(cp.x, sy / 2 + 0.1, cp.z - 60);
-      chipMesh.setMatrixAt(0, m);
-      chipMesh.instanceMatrix.needsUpdate = true;
-      chipMesh.frustumCulled = false;
-      this.scene.add(chipMesh);
-      this.chips.push(chipMesh);
+      chip.position.set(x, h / 2, z);
+      chip.castShadow = false;
+      this.scene.add(chip);
+      this.chips.push(chip);
 
-      // Gold lead-frame (pins visible around the die)
-      const pinMat = new THREE.MeshBasicMaterial({ color: 0xf5d061 });
-      const pinCount = 14;
-      const pPitch = 0.5;
+      // Gold pins on sides
+      const pinCount = Math.floor((w + d) * 2);
       for (let pi = 0; pi < pinCount; pi++) {
         const side = pi % 4;
         const pin = new THREE.Mesh(
-          new THREE.BoxGeometry(0.08, 0.02, 0.3),
+          new THREE.BoxGeometry(0.06, h * 0.6, 0.15),
           pinMat
         );
-        const px = cp.x;
-        const pz = cp.z - 60;
-        if (side === 0) pin.position.set(px - sx / 2 - 0.05, 0.05, pz - sx / 2 + pi * pPitch);
-        else if (side === 1) pin.position.set(px + sx / 2 + 0.05, 0.05, pz - sx / 2 + pi * pPitch);
-        else if (side === 2) pin.position.set(px - sx / 2 + pi * pPitch, 0.05, pz - sz / 2 - 0.05);
-        else pin.position.set(px - sx / 2 + pi * pPitch, 0.05, pz + sz / 2 + 0.05);
-        pin.rotation.x = Math.PI / 2;
+        pin.position.set(x, h * 0.5, z);
+        if (side === 0) pin.position.x += w / 2 + 0.03;
+        else if (side === 1) pin.position.x -= w / 2 + 0.03;
+        else if (side === 2) pin.position.z += d / 2 + 0.03;
+        else pin.position.z -= d / 2 + 0.03;
         this.scene.add(pin);
       }
     }
 
-    // ── Edge connector (gold fingers as 3D geometry) ─────────
-    const fingerMat = new THREE.MeshStandardMaterial({
-      color: 0xd4af37,
-      metalness: 0.85,
-      roughness: 0.2,
+    // ── Tall connector towers (you fly between these) ────────
+    const towerMat = new THREE.MeshStandardMaterial({
+      color: 0x2a2a2a,
+      metalness: 0.6,
+      roughness: 0.3,
     });
-    const fCount = 36;
-    const fPitch = 1.2;
-    const fStartX = -fCount * fPitch * 0.5;
-    for (let fi = 0; fi < fCount; fi++) {
-      const finger = new THREE.Mesh(
-        new THREE.BoxGeometry(0.7, 0.02, 0.3),
-        fingerMat
+    for (let i = 0; i < (lite ? 12 : 35); i++) {
+      const x = rnd(-BOARD_W * 0.4, BOARD_W * 0.4);
+      const z = rnd(-CORRIDOR + 80, -60);
+      const h = rnd(3.0, 8.0);
+      const w = rnd(0.4, 0.8);
+
+      const tower = new THREE.Mesh(
+        new THREE.BoxGeometry(w, h, w),
+        towerMat
       );
-      finger.position.set(
-        fStartX + fi * fPitch + 0.35,
-        0.01,
-        0.3 + CORRIDOR / 2 - 0.3
+      tower.position.set(x, h / 2 - 0.5, z);
+      this.scene.add(tower);
+      this.towers.push(tower);
+
+      // Gold tip
+      const tip = new THREE.Mesh(
+        new THREE.BoxGeometry(w * 1.2, 0.08, w * 1.2),
+        new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.9, roughness: 0.2 })
       );
-      this.scene.add(finger);
+      tip.position.set(x, h - 0.5, z);
+      this.scene.add(tip);
     }
 
-    // ── Capacitors (bronze cylinders with markings) ───────────
-    const capCount = lite ? 25 : 80;
+    // ── Capacitor clusters ────────────────────────────────────
     const capMat = new THREE.MeshStandardMaterial({
       color: 0x9c6a3a,
       metalness: 0.3,
       roughness: 0.6,
     });
-    for (let i = 0; i < capCount; i++) {
-      const x = rand(-BOARD_W * 0.4, BOARD_W * 0.4);
-      const z = 24 - Math.random() * (CORRIDOR + 120);
-      const h = rand(0.6, 1.8);
-      const r = rand(0.25, 0.5);
+    for (let i = 0; i < (lite ? 30 : 100); i++) {
+      const x = rnd(-BOARD_W * 0.4, BOARD_W * 0.4);
+      const z = rnd(-CORRIDOR + 50, -30);
+      const h = rnd(0.8, 2.5);
+      const r = rnd(0.2, 0.5);
 
-      const body = new THREE.Mesh(
-        new THREE.CylinderGeometry(r, r, h, 14),
+      const cap = new THREE.Mesh(
+        new THREE.CylinderGeometry(r, r, h, 10),
         capMat
       );
-      body.position.set(x, h / 2 + 0.1, z);
-      body.frustumCulled = false;
-      this.scene.add(body);
-      this.caps.push(body);
+      cap.position.set(x, h / 2 - 0.5, z);
+      this.scene.add(cap);
+      this.caps.push(cap);
 
+      // Polarity stripe
       const stripe = new THREE.Mesh(
-        new THREE.PlaneGeometry(r * 0.15, h * 0.6),
-        new THREE.MeshBasicMaterial({ color: 0xf5f5f0 })
+        new THREE.PlaneGeometry(r * 0.15, h * 0.5),
+        new THREE.MeshBasicMaterial({ color: 0xf5f5f0, transparent: true, opacity: 0.6 })
       );
-      stripe.position.set(x + r + 0.01, h / 2 + 0.1, z);
+      stripe.position.set(x + r + 0.01, h / 2 - 0.5, z);
       stripe.rotation.y = Math.PI / 2;
       this.scene.add(stripe);
     }
 
-    // ── LEDs (emissive gold/blue alternating) ─────────────────
-    const ledCount = lite ? 30 : 90;
-    this.ledMat = new THREE.MeshBasicMaterial({
-      color: 0xf7d98c,
-      transparent: true,
-      opacity: 0.95,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    });
-    this.leds = new THREE.InstancedMesh(
-      new THREE.SphereGeometry(0.18, 8, 8),
-      this.ledMat,
-      ledCount
-    );
-    for (let i = 0; i < ledCount; i++) {
-      const x = rand(-BOARD_W * 0.4, BOARD_W * 0.4);
-      const z = 24 - Math.random() * (CORRIDOR + 120);
-      const m = new THREE.Matrix4();
-      m.makeScale(1, 0.6, 1);
-      m.setPosition(x, 0.35, z);
-      this.leds.setMatrixAt(i, m);
+    // ── Glow / LED particles lining the corridor ──────────────
+    const glowCount = lite ? 200 : 700;
+    const glowGeo = new THREE.BufferGeometry();
+    const glowPos = new Float32Array(glowCount * 3);
+    const glowCol = new Float32Array(glowCount * 3);
+    const glowSeed = new Float32Array(glowCount);
+    for (let i = 0; i < glowCount; i++) {
+      glowPos[i * 3] = rnd(-BOARD_W * 0.45, BOARD_W * 0.45);
+      glowPos[i * 3 + 1] = rnd(0.1, 1.5);
+      glowPos[i * 3 + 2] = rnd(-CORRIDOR + 30, -10);
+      const c = new THREE.Color(
+        Math.random() < 0.4 ? 0x6fa8d6 : Math.random() < 0.6 ? 0xe6b54a : 0xbd8550
+      );
+      glowCol[i * 3] = c.r;
+      glowCol[i * 3 + 1] = c.g;
+      glowCol[i * 3 + 2] = c.b;
+      glowSeed[i] = Math.random();
     }
-    this.leds.instanceMatrix.needsUpdate = true;
-    this.leds.frustumCulled = false;
-    this.scene.add(this.leds);
-
-    // Store reference to blue LED material for dynamic pulsing
-    const blueLedMat = new THREE.MeshBasicMaterial({
-      color: 0x6fa8d6,
-      transparent: true,
-      opacity: 0.8,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    });
-    (this.leds as any).__blueMat = blueLedMat;
-
-    // Alternating blue/gold LEDs
-    const blueLeds = new THREE.InstancedMesh(
-      new THREE.SphereGeometry(0.18, 8, 8),
-      blueLedMat,
-      Math.floor(ledCount / 2)
+    glowGeo.setAttribute('position', new THREE.BufferAttribute(glowPos, 3));
+    glowGeo.setAttribute('color', new THREE.BufferAttribute(glowCol, 3));
+    glowGeo.setAttribute('seed', new THREE.BufferAttribute(glowSeed, 1));
+    this.glowParticles = new THREE.Points(
+      glowGeo,
+      new THREE.ShaderMaterial({
+        vertexShader: `
+          attribute vec3 color;
+          attribute float seed;
+          uniform float uTime;
+          varying vec3 vCol;
+          varying float vSeed;
+          void main() {
+            vCol = color;
+            vSeed = seed;
+            vec3 p = position;
+            p.y += sin(uTime * 0.8 + seed * 10.0) * 0.2;
+            vec4 mv = modelViewMatrix * vec4(p, 1.0);
+            gl_PointSize = (2.0 + seed * 4.0) * (40.0 / -mv.z);
+            gl_Position = projectionMatrix * mv;
+          }
+        `,
+        fragmentShader: `
+          varying vec3 vCol;
+          varying float vSeed;
+          uniform float uTime;
+          void main() {
+            float d = length(gl_PointCoord - 0.5);
+            if (d > 0.5) discard;
+            float a = smoothstep(0.5, 0.0, d);
+            float pulse = 0.5 + 0.5 * sin(uTime * 1.2 + vSeed * 60.0);
+            gl_FragColor = vec4(vCol, a * 0.5 * pulse);
+          }
+        `,
+        uniforms: { uTime: { value: 0 } },
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      })
     );
-    for (let i = 0; i < Math.floor(ledCount / 2); i++) {
-      const x = rand(-BOARD_W * 0.4, BOARD_W * 0.4);
-      const z = 24 - Math.random() * (CORRIDOR + 120);
-      const m = new THREE.Matrix4();
-      m.makeScale(1, 0.6, 1);
-      m.setPosition(x, 0.35, z);
-      blueLeds.setMatrixAt(i, m);
-    }
-    blueLeds.instanceMatrix.needsUpdate = true;
-    blueLeds.frustumCulled = false;
-    this.scene.add(blueLeds);
+    this.glowParticles.frustumCulled = false;
+    this.scene.add(this.glowParticles);
 
-    // ── Current sparks ────────────────────────────────────────
-    const sparkCount = lite ? 300 : 900;
+    // ── Spark particles (data flow along corridor) ────────────
+    const sparkCount = lite ? 200 : 600;
     const sparkGeo = new THREE.BufferGeometry();
     const sp = new Float32Array(sparkCount * 3);
+    const spSpeed = new Float32Array(sparkCount);
     for (let i = 0; i < sparkCount; i++) {
-      sp[i * 3] = rand(-BOARD_W * 0.4, BOARD_W * 0.4);
-      sp[i * 3 + 1] = rand(0.1, 1.0);
-      sp[i * 3 + 2] = 24 - Math.random() * (CORRIDOR + 120);
+      sp[i * 3] = rnd(-BOARD_W * 0.4, BOARD_W * 0.4);
+      sp[i * 3 + 1] = rnd(0.1, 0.6);
+      sp[i * 3 + 2] = rnd(-CORRIDOR + 20, -10);
+      spSpeed[i] = 15 + Math.random() * 25;
     }
     sparkGeo.setAttribute('position', new THREE.BufferAttribute(sp, 3));
-    this.sparks = new THREE.Points(
+    sparkGeo.setAttribute('speed', new THREE.BufferAttribute(spSpeed, 1));
+    this.sparkParticles = new THREE.Points(
       sparkGeo,
-      new THREE.PointsMaterial({
-        color: 0xf7d98c,
-        size: 0.18,
+      new THREE.ShaderMaterial({
+        vertexShader: `
+          attribute float speed;
+          uniform float uTime;
+          uniform float uDt;
+          varying float vAlpha;
+          void main() {
+            vec3 p = position;
+            float t = mod(uTime * 0.3 + speed * 0.01, 1.0);
+            p.z = mix(-CORRIDOR + 20.0, -10.0, t);
+            p.x += sin(uTime * 0.5 + p.z * 0.1) * 2.0;
+            vAlpha = sin(t * 3.14);
+            vec4 mv = modelViewMatrix * vec4(p, 1.0);
+            gl_PointSize = 2.0 * (30.0 / -mv.z);
+            gl_Position = projectionMatrix * mv;
+          }
+        `,
+        fragmentShader: `
+          varying float vAlpha;
+          void main() {
+            float d = length(gl_PointCoord - 0.5);
+            if (d > 0.5) discard;
+            float a = smoothstep(0.5, 0.0, d);
+            gl_FragColor = vec4(0.90, 0.71, 0.29, a * vAlpha * 0.8);
+          }
+        `,
+        uniforms: { uTime: { value: 0 }, uDt: { value: 0 } },
         transparent: true,
-        opacity: 0.85,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
-        sizeAttenuation: true,
       })
     );
-    this.sparks.frustumCulled = false;
-    this.scene.add(this.sparks);
+    this.sparkParticles.frustumCulled = false;
+    this.scene.add(this.sparkParticles);
 
-    // ── Data-flow particles (tiny dots zipping along traces) ──
-    const dfCount = lite ? 200 : 600;
-    const dfGeo = new THREE.BufferGeometry();
-    const dfPos = new Float32Array(dfCount * 3);
-    const dfSeed = new Float32Array(dfCount);
-    for (let i = 0; i < dfCount; i++) {
-      dfPos[i * 3] = rand(-BOARD_W * 0.4, BOARD_W * 0.4);
-      dfPos[i * 3 + 1] = rand(0.02, 0.08);
-      dfPos[i * 3 + 2] = 24 - Math.random() * (CORRIDOR + 120);
-      dfSeed[i] = Math.random();
-    }
-    dfGeo.setAttribute('position', new THREE.BufferAttribute(dfPos, 3));
-    dfGeo.setAttribute('seed', new THREE.BufferAttribute(dfSeed, 1));
-    this.dataFlowParticles = new THREE.Points(
-      dfGeo,
-      new THREE.PointsMaterial({
-        color: 0x6fa8d6,
-        size: 0.06,
-        transparent: true,
-        opacity: 0.4,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-        sizeAttenuation: true,
-      })
-    );
-    this.dataFlowParticles.frustumCulled = false;
-    this.scene.add(this.dataFlowParticles);
-
-    // Ambient hemisphere light
-    const hemi = new THREE.HemisphereLight(0x6fa8d6, 0x1b5e20, 0.6);
+    // Hemisphere light
+    const hemi = new THREE.HemisphereLight(0x6fa8d6, 0x1b5e20, 0.8);
     this.scene.add(hemi);
+    const dirLight = new THREE.DirectionalLight(0xf7d98c, 0.4);
+    dirLight.position.set(10, 20, 10);
+    this.scene.add(dirLight);
 
-    this.camera.position.set(0, 6, 10);
+    // Initial camera
+    this.camera.position.set(0, 4, 15);
+    this.camera.lookAt(0, 1, -20);
   }
-
-  private dataFlowParticles!: THREE.Points;
 
   override update({ t, dt, p, pointer }: UpdateArgs): void {
     this.smoothedP += (p - this.smoothedP) * Math.min(1, dt * 5);
     const sp = this.smoothedP;
 
-    // Cinematic camera path with gentle banking
-    const z = 10 - sp * CORRIDOR;
-    const sway = Math.sin(sp * Math.PI * 2.4) * 3.0 + pointer.nx * 2.0;
-    const height = 6 - sp * 4.0 + Math.sin(sp * Math.PI * 1.8) * 0.6;
-    const bank = Math.sin(sp * Math.PI * 2.4) * 0.08;
-    this.camera.position.set(
-      sway,
-      height + Math.sin(sp * Math.PI * 4) * 0.4 + pointer.ny * 0.8,
-      z
+    // Flythrough corridor camera — you move THROUGH the board
+    const z = 15 - sp * CORRIDOR * 0.9;
+    const sway = Math.sin(sp * Math.PI * 3.0) * 8.0 + pointer.nx * 4.0;
+    const height = 3.5 + Math.sin(sp * Math.PI * 2.0) * 1.5 + pointer.ny * 1.0;
+    const lookZ = z - 50;
+
+    this.camera.position.set(sway, height, z);
+    this.camera.lookAt(
+      sway * 0.5 + Math.sin(sp * Math.PI * 2.5) * 2.0,
+      height * 0.6,
+      lookZ
     );
-    // Look ahead with bank offset
-    const lookX = sway * 0.4 + Math.sin(sp * Math.PI * 2) * 1.2;
-    const lookY = height * 0.3;
-    const lookZ = z - 35;
-    this.camera.lookAt(lookX, lookY, lookZ);
-    // Gentle roll bank
-    this.camera.rotation.z = bank * 0.5;
 
     this.boardMat.uniforms.uTime.value = t;
     this.boardMat.uniforms.uCam.value.copy(this.camera.position);
     if (this.pcbTex) this.boardMat.uniforms.uPcbTex.value = this.pcbTex;
 
-    // LED breathing — gold and blue LEDs alternate with complex pattern
-    const ledPulse = 0.5 + 0.45 * (0.5 + 0.5 * Math.sin(t * 2.2 + Math.sin(t * 0.7) * 0.5));
-    this.ledMat.opacity = ledPulse;
-    // Also pulse the blue LEDs
-    const blueMat = (this.leds as any).__blueMat as THREE.MeshBasicMaterial | undefined;
-    if (blueMat) {
-      blueMat.opacity = 0.4 + 0.4 * (0.5 + 0.5 * Math.sin(t * 1.8 + Math.cos(t * 0.5) * 0.7));
-    }
+    // Animate glow particles
+    (this.glowParticles.material as THREE.ShaderMaterial).uniforms.uTime.value = t;
 
-    // Sparks drift along +x and wrap with varied speeds
-    const pos = this.sparks.geometry.getAttribute('position') as THREE.BufferAttribute;
-    const arr = pos.array as Float32Array;
-    const speed = dt * 12;
-    for (let i = 0; i < arr.length; i += 3) {
-      arr[i] += speed * (0.5 + 0.5 * Math.sin(arr[i + 1] * 3.0 + t * 0.5));
-      if (arr[i] > BOARD_W * 0.45) arr[i] = -BOARD_W * 0.45;
-    }
-    pos.needsUpdate = true;
-
-    // Animate data-flow particles
-    if (this.dataFlowParticles) {
-      const dp = this.dataFlowParticles.geometry.getAttribute('position') as THREE.BufferAttribute;
-      const da = dp.array as Float32Array;
-      for (let i = 0; i < da.length; i += 3) {
-        const idx = i / 3;
-        da[i] += dt * (8 + ((idx * 7) % 13) * 0.5) * Math.sign(da[i * 2 + 1] ?? 1);
-        if (da[i] > BOARD_W * 0.45) da[i] = -BOARD_W * 0.45;
-        if (da[i] < -BOARD_W * 0.45) da[i] = BOARD_W * 0.45;
-      }
-      dp.needsUpdate = true;
-    }
+    // Animate sparks
+    const sparkMat = this.sparkParticles.material as THREE.ShaderMaterial;
+    sparkMat.uniforms.uTime.value = t;
+    sparkMat.uniforms.uDt.value = dt;
   }
 }

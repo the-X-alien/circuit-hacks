@@ -1,47 +1,54 @@
 import * as THREE from 'three';
 import { FXScene, type UpdateArgs } from '../FXSceneManager';
 
-const CARD_COUNT = 18;
-const TIER_COLORS = [0x6fa8d6, 0xe6b54a, 0xbd8550];
-const TIER_NAMES = ['CORE', 'TITLE', 'COMMUNITY'];
+const TIER_COLORS: Record<string, number> = {
+  Partner: 0x6fa8d6,
+  Gold: 0xe6b54a,
+  Silver: 0xa0aec0,
+  Bronze: 0xbd8550,
+  'In-Kind': 0x5a7a8a,
+};
 
-// Card config: name, width, height, distance from pillar, tier color
-const tiers = [
-  { name: 'TITLE', w: 4.0, h: 2.2, r: 3.8, count: 3 },
-  { name: 'CORE', w: 3.2, h: 1.8, r: 3.0, count: 6 },
-  { name: 'COMMUNITY', w: 2.4, h: 1.4, r: 2.2, count: 9 },
-];
-
-function getTierIndex(i: number): number {
-  let acc = 0;
-  for (let t = 0; t < tiers.length; t++) {
-    acc += tiers[t]!.count;
-    if (i < acc) return t;
-  }
-  return 2;
+interface TierDef {
+  label: string
+  count: number
+  radius: number
+  startY: number
+  color: number
+  cardW: number
+  cardH: number
+  cardD: number
 }
 
+const TIERS: TierDef[] = [
+  { label: 'Partner', count: 2, radius: 2.0, startY: 8.0, color: 0x6fa8d6, cardW: 3.2, cardH: 1.8, cardD: 0.12 },
+  { label: 'Gold', count: 3, radius: 3.0, startY: 5.5, color: 0xe6b54a, cardW: 2.8, cardH: 1.6, cardD: 0.10 },
+  { label: 'Silver', count: 4, radius: 4.0, startY: 3.0, color: 0xa0aec0, cardW: 2.4, cardH: 1.4, cardD: 0.09 },
+  { label: 'Bronze', count: 5, radius: 5.0, startY: 0.5, color: 0xbd8550, cardW: 2.0, cardH: 1.2, cardD: 0.08 },
+  { label: 'In-Kind', count: 6, radius: 6.0, startY: -2.5, color: 0x5a7a8a, cardW: 1.6, cardH: 1.0, cardD: 0.06 },
+];
+
 export class SponsorTree extends FXScene {
-  private treeMat!: THREE.ShaderMaterial;
-  private cards: THREE.Mesh[] = [];
-  private labels: { mesh: THREE.Mesh; y: number }[] = [];
-  private cardTier: number[] = [];
-  private branches!: THREE.LineSegments;
-  private particles!: THREE.Points;
-  private smoothedP = 0;
-  private shimmerParticles!: THREE.Points;
+  private treeGroup = new THREE.Group();
+  private trunkMat!: THREE.ShaderMaterial;
+  private cardMats: THREE.ShaderMaterial[] = [];
+  private treeAngle = 0;
 
   override init(renderer: THREE.WebGLRenderer, lite: boolean): void {
     super.init(renderer, lite);
-    this.camera.far = 400;
+    this.camera.far = 500;
     this.camera.updateProjectionMatrix();
-    this.camera.position.set(0, 0, 28);
+    this.camera.position.set(0, 2, 28);
 
-    // ── Central pillar / spine ────────────────────────────────
-    this.treeMat = new THREE.ShaderMaterial({
+    const isLite = lite;
+
+    // ── Trunk ──────────────────────────────────────────────────
+    this.trunkMat = new THREE.ShaderMaterial({
       vertexShader: `
         varying vec3 vPos;
+        varying vec2 vUv;
         void main() {
+          vUv = uv;
           vec4 wp = modelMatrix * vec4(position, 1.0);
           vPos = wp.xyz;
           gl_Position = projectionMatrix * viewMatrix * wp;
@@ -50,133 +57,104 @@ export class SponsorTree extends FXScene {
       fragmentShader: `
         uniform float uTime;
         varying vec3 vPos;
-
+        varying vec2 vUv;
         void main() {
-          float h = vPos.y * 0.08;
-          float pulse = 0.5 + 0.5 * sin(uTime * 0.8 + vPos.y * 0.5);
-          float glow = 0.3 + 0.7 * smoothstep(0.7, 0.0, abs(vPos.x) * 6.0);
-          vec3 blue  = vec3(0.44, 0.66, 0.84);
-          vec3 gold  = vec3(0.90, 0.71, 0.29);
-          vec3 bronze = vec3(0.74, 0.52, 0.31);
-          float mix1 = 0.5 + 0.5 * sin(h * 2.0 + uTime * 0.3);
-          float mix2 = 0.5 + 0.5 * cos(h * 3.0 + uTime * 0.4);
-          vec3 col = mix(mix(blue, gold, mix1), bronze, mix2);
-          col *= 0.6 + 0.4 * pulse;
-          gl_FragColor = vec4(col, 0.35 + 0.15 * glow);
+          float grain = fract(sin(vPos.y * 14.0 + vUv.x * 44.0) * 437.0) * 0.05;
+          vec3 dark = vec3(0.08, 0.06, 0.03);
+          vec3 light = vec3(0.18, 0.12, 0.06);
+          float wave = 0.5 + 0.5 * sin(vPos.y * 0.8 + uTime * 0.1);
+          vec3 col = mix(dark, light, wave) + grain;
+          float edge = abs(vUv.x - 0.5) * 2.0;
+          vec3 blue = vec3(0.44, 0.66, 0.84);
+          vec3 gold = vec3(0.90, 0.71, 0.29);
+          float pulse = 0.5 + 0.5 * sin(uTime * 0.5 + vPos.y);
+          col += mix(blue, gold, pulse) * pow(edge, 4.0) * 0.15;
+          gl_FragColor = vec4(col, 1.0);
         }
       `,
       uniforms: { uTime: { value: 0 } },
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      side: THREE.DoubleSide,
     });
-    const pillar = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.6, 0.6, 28, 24, 1, true),
-      this.treeMat
+    const trunk = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.4, 1.0, 16, 14, 6),
+      this.trunkMat
     );
-    pillar.position.y = 0;
-    pillar.frustumCulled = false;
-    this.scene.add(pillar);
+    trunk.position.y = 1;
+    trunk.frustumCulled = false;
+    this.treeGroup.add(trunk);
 
-    // Core glow tube inside the pillar
-    const coreGlow = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.25, 0.25, 26, 16),
-      new THREE.MeshBasicMaterial({
-        color: 0x6fa8d6,
-        transparent: true,
-        opacity: 0.15,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-      })
-    );
-    coreGlow.position.y = 0;
-    this.scene.add(coreGlow);
+    // ── Cards on branches, tier by tier ────────────────────────
+    let cardIdx = 0;
+    for (const tier of TIERS) {
+      for (let ci = 0; ci < tier.count; ci++) {
+        const angle = (ci / tier.count) * Math.PI * 2 + tier.label.length * 0.3;
+        const y = tier.startY + (ci - (tier.count - 1) / 2) * 0.3;
+        const a = angle + cardIdx * 0.05;
+        const px = Math.cos(a) * tier.radius;
+        const pz = Math.sin(a) * tier.radius;
 
-    // Ring nodes along the spine
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0xe6b54a,
-      transparent: true,
-      opacity: 0.12,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      wireframe: true,
-    });
-    for (let i = -5; i <= 5; i++) {
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.015, 6, 24), ringMat);
-      ring.position.y = i * 2.0 + 1.0;
-      ring.rotation.x = Math.PI / 2;
-      this.scene.add(ring);
-    }
+        // ── Branch arm (curved tube from trunk to card) ────────
+        const midR = tier.radius * 0.5;
+        const pts = [
+          new THREE.Vector3(0, y - 0.3, 0),
+          new THREE.Vector3(Math.cos(a) * midR * 0.5, y + 0.1, Math.sin(a) * midR * 0.5),
+          new THREE.Vector3(Math.cos(a) * midR, y + 0.2, Math.sin(a) * midR),
+          new THREE.Vector3(px, y, pz),
+        ];
+        const curve = new THREE.CatmullRomCurve3(pts);
 
-    // ── Sponsor cards ascending the pillar ────────────────────
-    // Spread cards from Y=-11 to Y=11 with tier-based spacing
-    let cardIndex = 0;
-    const isLite = lite;
-    for (let ti = 0; ti < tiers.length; ti++) {
-      const t = tiers[ti]!;
-      for (let ci = 0; ci < t.count; ci++) {
-        const frac = ci / Math.max(1, t.count - 1);
-        const y = -11 + (frac * 22);
-        const angle = cardIndex * 1.15 + Math.random() * 0.15;
-        this.cardTier.push(ti);
+        if (!isLite) {
+          const branchMat = new THREE.MeshBasicMaterial({
+            color: tier.color,
+            transparent: true,
+            opacity: 0.25,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+          });
+          const branch = new THREE.Mesh(
+            new THREE.TubeGeometry(curve, 10, 0.035, 4, false),
+            branchMat
+          );
+          branch.frustumCulled = false;
+          this.treeGroup.add(branch);
 
-        // Branch lines from pillar to card
-        const branchPoints: number[] = [];
-        const segs = 12;
-        for (let s = 0; s <= segs; s++) {
-          const f = s / segs;
-          const bDist = f * t.r;
-          const bx = Math.cos(angle) * bDist;
-          const bz = Math.sin(angle) * bDist;
-          const by = y - 0.35 + f * 0.35;
-          branchPoints.push(bx, by, bz);
-        }
-
-        if (!lite) {
-          const branchGeo = new THREE.BufferGeometry();
-          const pts = new Float32Array(branchPoints);
-          branchGeo.setAttribute('position', new THREE.BufferAttribute(pts, 3));
-          const branchMesh = new THREE.Line(
-            branchGeo,
-            new THREE.LineBasicMaterial({
-              color: TIER_COLORS[ti],
+          // Wire overlay
+          const wire = new THREE.Mesh(
+            new THREE.TubeGeometry(curve, 10, 0.035, 4, false),
+            new THREE.MeshBasicMaterial({
+              color: tier.color,
               transparent: true,
-              opacity: 0.08,
-              blending: THREE.AdditiveBlending,
+              opacity: 0.06,
+              wireframe: true,
               depthWrite: false,
             })
           );
-          branchMesh.frustumCulled = false;
-          this.scene.add(branchMesh);
+          wire.frustumCulled = false;
+          this.treeGroup.add(wire);
         }
 
-        const col = new THREE.Color(TIER_COLORS[ti]);
-        const cardW = t.w;
-        const cardH = t.h;
-        const geo = new THREE.PlaneGeometry(cardW, cardH);
-
-        // Backing glow
-        const glowMesh = new THREE.Mesh(
-          geo,
+        // ── Branch tip glow ────────────────────────────────────
+        const tipGlow = new THREE.Mesh(
+          new THREE.SphereGeometry(0.1, 6, 6),
           new THREE.MeshBasicMaterial({
-            color: TIER_COLORS[ti],
+            color: tier.color,
             transparent: true,
-            opacity: 0.08,
+            opacity: 0.12,
             blending: THREE.AdditiveBlending,
             depthWrite: false,
           })
         );
-        glowMesh.position.set(Math.cos(angle) * t.r, y, Math.sin(angle) * t.r);
-        glowMesh.lookAt(0, y, 0);
-        this.scene.add(glowMesh);
+        tipGlow.position.set(px, y, pz);
+        tipGlow.frustumCulled = false;
+        this.treeGroup.add(tipGlow);
 
-        // Card face with text content
+        // ── 3D Card ────────────────────────────────────────────
         const cardMat = new THREE.ShaderMaterial({
           vertexShader: `
             varying vec2 vUv;
+            varying vec3 vNormal;
             void main() {
               vUv = uv;
+              vNormal = normalize(normalMatrix * normal);
               gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
             }
           `,
@@ -184,54 +162,77 @@ export class SponsorTree extends FXScene {
             uniform vec3 uColor;
             uniform float uTime;
             uniform float uOffset;
-            uniform float uTier;
             varying vec2 vUv;
-
-            vec2 transformUv(vec2 uv, float aspect) {
-              vec2 c = uv - 0.5;
-              c.x *= aspect;
-              return c;
-            }
+            varying vec3 vNormal;
 
             void main() {
-              float border = 0.025;
-              float b = smoothstep(0.0, border, vUv.x) - smoothstep(1.0 - border, 1.0, vUv.x);
-              b *= smoothstep(0.0, border, vUv.y) - smoothstep(1.0 - border, 1.0, vUv.y);
-
-              vec3 bg = vec3(0.06, 0.05, 0.04);
               vec3 edge = uColor;
-              float pulse = 0.7 + 0.3 * sin(uTime * 0.6 + uOffset);
 
-              vec3 col = mix(bg, edge * 1.3, b * 0.5);
-              col += edge * pulse * 0.04;
-              col *= 0.85 + 0.15 * (vUv.x + vUv.y) * 0.5;
+              // Bevel border on front face
+              float bevel = 0.04;
+              float border = smoothstep(0.0, bevel, vUv.x) - smoothstep(1.0 - bevel, 1.0, vUv.x);
+              border *= smoothstep(0.0, bevel, vUv.y) - smoothstep(1.0 - bevel, 1.0, vUv.y);
 
-              // Tier text area: top band
-              float textBand = smoothstep(0.75, 0.85, vUv.y) * 0.15;
-              col += edge * textBand * 0.6;
+              // Face gradient
+              float faceGrad = 0.85 + 0.15 * (1.0 - vUv.y);
 
-              float a = 0.6 + 0.15 * b;
+              // Pulldown top band
+              float band = smoothstep(0.78, 0.86, vUv.y) * 0.15;
+
+              // Always visible edge glow
+              float pulse = 0.6 + 0.4 * sin(uTime * 0.5 + uOffset);
+              vec3 col = vec3(0.06, 0.05, 0.04);
+              col = mix(col, edge * 1.2, border * 0.5);
+              col += edge * pulse * 0.05;
+              col += edge * band;
+              col *= faceGrad;
+
+              // Side faces get darker
+              float side = abs(vNormal.x) > 0.5 || abs(vNormal.z) > 0.5 ? 1.0 : 0.0;
+              col *= 1.0 - side * 0.5;
+
+              float a = 0.7 + 0.2 * border;
               gl_FragColor = vec4(col, a);
             }
           `,
           uniforms: {
-            uColor: { value: new THREE.Color(TIER_COLORS[ti]) },
+            uColor: { value: new THREE.Color(tier.color) },
             uTime: { value: 0 },
-            uOffset: { value: cardIndex * 1.7 },
-            uTier: { value: ti },
+            uOffset: { value: cardIdx * 1.7 },
           },
           transparent: true,
           depthWrite: false,
           side: THREE.DoubleSide,
         });
-        const cardMesh = new THREE.Mesh(geo, cardMat);
-        cardMesh.position.set(Math.cos(angle) * t.r, y, Math.sin(angle) * t.r);
-        cardMesh.lookAt(0, y, 0);
-        cardMesh.frustumCulled = false;
-        this.scene.add(cardMesh);
-        this.cards.push(cardMesh);
+        this.cardMats.push(cardMat);
 
-        // Create canvas label for each card
+        const cardGeo = new THREE.BoxGeometry(tier.cardW, tier.cardH, tier.cardD);
+        const card = new THREE.Mesh(cardGeo, cardMat);
+        card.position.set(px, y, pz);
+        // Face card outward from trunk
+        card.lookAt(px * 2, y, pz * 2);
+        card.frustumCulled = false;
+        this.treeGroup.add(card);
+
+        // ── Backplate (slightly larger, behind card) ──────────
+        const backMat = new THREE.MeshBasicMaterial({
+          color: tier.color,
+          transparent: true,
+          opacity: 0.04,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+        });
+        const back = new THREE.Mesh(
+          new THREE.BoxGeometry(tier.cardW * 1.08, tier.cardH * 1.08, tier.cardD * 0.5),
+          backMat
+        );
+        back.position.set(px, y, pz);
+        back.lookAt(px * 2, y, pz * 2);
+        back.frustumCulled = false;
+        this.treeGroup.add(back);
+
+        // ── Canvas label ───────────────────────────────────────
         if (!isLite) {
           const canvas = document.createElement('canvas');
           canvas.width = 512;
@@ -239,26 +240,20 @@ export class SponsorTree extends FXScene {
           const ctx = canvas.getContext('2d')!;
           ctx.clearRect(0, 0, 512, 256);
 
-          ctx.fillStyle = '#ffffff';
-          ctx.font = '28px monospace';
-          ctx.textAlign = 'center';
+          const hex = '#' + tier.color.toString(16).padStart(6, '0');
 
-          const colorHex = '#' + TIER_COLORS[ti]!.toString(16).padStart(6, '0');
-
-          // Tier badge
-          ctx.fillStyle = colorHex;
+          ctx.fillStyle = hex;
           ctx.font = 'bold 22px monospace';
           ctx.textAlign = 'left';
-          ctx.fillText(t.name, 24, 36);
-          // Sponsor number
-          ctx.fillStyle = 'rgba(255,255,255,0.15)';
-          ctx.font = '12px monospace';
-          ctx.fillText('SLOT ' + (cardIndex + 1).toString().padStart(2, '0'), 24, 56);
+          ctx.fillText(tier.label.toUpperCase(), 24, 36);
 
-          // Dashed line separator
-          ctx.strokeStyle = colorHex;
+          ctx.fillStyle = 'rgba(255,255,255,0.12)';
+          ctx.font = '12px monospace';
+          ctx.fillText('SLOT ' + (cardIdx + 1).toString().padStart(2, '0'), 24, 56);
+
+          ctx.strokeStyle = hex;
           ctx.lineWidth = 1;
-          ctx.globalAlpha = 0.3;
+          ctx.globalAlpha = 0.25;
           ctx.setLineDash([4, 4]);
           ctx.beginPath();
           ctx.moveTo(24, 70);
@@ -267,21 +262,18 @@ export class SponsorTree extends FXScene {
           ctx.setLineDash([]);
           ctx.globalAlpha = 1;
 
-          // Logo area
-          ctx.fillStyle = 'rgba(255,255,255,0.04)';
+          ctx.fillStyle = 'rgba(255,255,255,0.03)';
           ctx.fillRect(24, 90, 464, 100);
-          ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+          ctx.strokeStyle = 'rgba(255,255,255,0.05)';
           ctx.lineWidth = 1;
           ctx.strokeRect(24, 90, 464, 100);
-
-          ctx.fillStyle = 'rgba(255,255,255,0.18)';
+          ctx.fillStyle = 'rgba(255,255,255,0.15)';
           ctx.font = '18px monospace';
           ctx.textAlign = 'center';
           ctx.fillText('YOUR LOGO', 256, 154);
 
-          // Bottom bar
-          ctx.fillStyle = colorHex;
-          ctx.globalAlpha = 0.2;
+          ctx.fillStyle = hex;
+          ctx.globalAlpha = 0.15;
           ctx.fillRect(24, 210, 464, 3);
           ctx.globalAlpha = 1;
 
@@ -291,99 +283,59 @@ export class SponsorTree extends FXScene {
             map: labelTex,
             transparent: true,
             depthWrite: false,
-            opacity: 0.75,
+            opacity: 0.6,
             side: THREE.DoubleSide,
             blending: THREE.AdditiveBlending,
           });
-          const labelMesh = new THREE.Mesh(
-            new THREE.PlaneGeometry(cardW * 0.85, cardH * 0.7),
+          const label = new THREE.Mesh(
+            new THREE.PlaneGeometry(tier.cardW * 0.8, tier.cardH * 0.55),
             labelMat
           );
-          labelMesh.position.copy(cardMesh.position);
-          labelMesh.position.z += Math.sin(angle) * t.r * -0.02;
-          labelMesh.lookAt(0, y, 0);
-          labelMesh.frustumCulled = false;
-          this.scene.add(labelMesh);
-          this.labels.push({ mesh: labelMesh, y });
+          label.position.set(px, y, pz);
+          // Slightly forward of card face
+          const norm = new THREE.Vector3(px, 0, pz).normalize();
+          label.position.addScaledVector(norm, 0.07);
+          label.lookAt(px * 2, y, pz * 2);
+          label.frustumCulled = false;
+          this.treeGroup.add(label);
         }
 
-        cardIndex++;
+        cardIdx++;
       }
     }
 
-    // ── Geometric branch connections (wireframe tree canopy) ──
-    if (!lite) {
-      const branchPositions: number[] = [];
-      const branchColors: number[] = [];
-      for (let i = 0; i < this.cards.length; i++) {
-        for (let j = i + 1; j < this.cards.length; j++) {
-          const dist = Math.abs(i - j);
-          if (dist > 4) continue;
-          // Connect nearby cards at similar heights
-          const p1 = this.cards[i]!.position;
-          const p2 = this.cards[j]!.position;
-          if (Math.abs(p1.y - p2.y) > 5) continue;
-          branchPositions.push(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
-          const c = new THREE.Color(TIER_COLORS[this.cardTier[i]!]);
-          for (let k = 0; k < 2; k++) {
-            branchColors.push(c.r, c.g, c.b);
-          }
-        }
-      }
-      if (branchPositions.length > 0) {
-        const bGeo = new THREE.BufferGeometry();
-        bGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(branchPositions), 3));
-        bGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(branchColors), 3));
-        this.branches = new THREE.LineSegments(
-          bGeo,
-          new THREE.LineBasicMaterial({
-            vertexColors: true,
-            transparent: true,
-            opacity: 0.06,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false,
-          })
-        );
-        this.branches.frustumCulled = false;
-        this.scene.add(this.branches);
-      }
+    // ── Floating particles ─────────────────────────────────────
+    const pCount = isLite ? 200 : 700;
+    const pGeo = new THREE.BufferGeometry();
+    const pos = new Float32Array(pCount * 3);
+    const seeds = new Float32Array(pCount);
+    for (let i = 0; i < pCount; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const r = 2 + Math.random() * 8;
+      const y = -4 + Math.random() * 16;
+      pos[i * 3] = Math.cos(theta) * r;
+      pos[i * 3 + 1] = y;
+      pos[i * 3 + 2] = Math.sin(theta) * r;
+      seeds[i] = Math.random();
     }
+    pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    pGeo.setAttribute('seed', new THREE.BufferAttribute(seeds, 1));
 
-    // ── Shimmer particles (rising sparkles) ───────────────────
-    const shCount = lite ? 200 : 600;
-    const shGeo = new THREE.BufferGeometry();
-    const shPos = new Float32Array(shCount * 3);
-    const shSpeed = new Float32Array(shCount);
-    const shSeed = new Float32Array(shCount);
-    for (let i = 0; i < shCount; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const r = 0.5 + Math.random() * 5;
-      shPos[i * 3] = Math.cos(a) * r;
-      shPos[i * 3 + 1] = -13 + Math.random() * 26;
-      shPos[i * 3 + 2] = Math.sin(a) * r;
-      shSpeed[i] = 0.4 + Math.random() * 1.2;
-      shSeed[i] = Math.random();
-    }
-    shGeo.setAttribute('position', new THREE.BufferAttribute(shPos, 3));
-    shGeo.setAttribute('speed', new THREE.BufferAttribute(shSpeed, 1));
-    shGeo.setAttribute('seed', new THREE.BufferAttribute(shSeed, 1));
-
-    this.shimmerParticles = new THREE.Points(
-      shGeo,
+    const particles = new THREE.Points(
+      pGeo,
       new THREE.ShaderMaterial({
         vertexShader: `
-          attribute float speed;
           attribute float seed;
           uniform float uTime;
           varying float vSeed;
           void main() {
             vSeed = seed;
             vec3 p = position;
-            p.y += mod(uTime * speed + seed * 13.0, 20.0) - 10.0;
-            p.x += sin(uTime * 0.3 + seed * 7.0) * 0.2;
-            p.z += cos(uTime * 0.4 + seed * 5.0) * 0.2;
+            p.y += sin(uTime * 0.2 + seed * 6.28 + position.x * 0.3) * 0.5;
+            p.x += sin(uTime * 0.15 + seed * 4.2) * 0.3;
+            p.z += cos(uTime * 0.18 + seed * 5.1) * 0.3;
             vec4 mv = modelViewMatrix * vec4(p, 1.0);
-            gl_PointSize = (1.5 + seed * 2.5) * (80.0 / -mv.z);
+            gl_PointSize = (1.5 + seed * 3.0) * (80.0 / -mv.z);
             gl_Position = projectionMatrix * mv;
           }
         `,
@@ -394,11 +346,11 @@ export class SponsorTree extends FXScene {
             float d = length(gl_PointCoord - 0.5);
             if (d > 0.5) discard;
             float a = smoothstep(0.5, 0.0, d);
-            float twinkle = 0.3 + 0.7 * sin(uTime * (0.8 + vSeed * 2.0) + vSeed * 100.0);
             vec3 col;
             if (vSeed < 0.33) col = vec3(0.44, 0.66, 0.84);
             else if (vSeed < 0.66) col = vec3(0.90, 0.71, 0.29);
             else col = vec3(0.74, 0.52, 0.31);
+            float twinkle = 0.5 + 0.5 * sin(uTime * 1.5 + vSeed * 100.0);
             gl_FragColor = vec4(col, a * 0.35 * twinkle);
           }
         `,
@@ -408,104 +360,45 @@ export class SponsorTree extends FXScene {
         depthWrite: false,
       })
     );
-    this.shimmerParticles.frustumCulled = false;
-    this.scene.add(this.shimmerParticles);
+    particles.frustumCulled = false;
+    this.treeGroup.add(particles);
 
-    // ── Floating particles around the tree ────────────────────
-    const pCount = lite ? 400 : 1200;
-    const pGeo = new THREE.BufferGeometry();
-    const pos = new Float32Array(pCount * 3);
-    const sizes = new Float32Array(pCount);
-    const seeds = new Float32Array(pCount);
-    for (let i = 0; i < pCount; i++) {
-      const theta = Math.random() * Math.PI * 2;
-      const r = 1.5 + Math.random() * 8;
-      const y = -12 + Math.random() * 24;
-      pos[i * 3] = Math.cos(theta) * r;
-      pos[i * 3 + 1] = y;
-      pos[i * 3 + 2] = Math.sin(theta) * r;
-      sizes[i] = 0.04 + Math.random() * 0.12;
-      seeds[i] = Math.random();
-    }
-    pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    pGeo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-    pGeo.setAttribute('seed', new THREE.BufferAttribute(seeds, 1));
+    this.scene.add(this.treeGroup);
 
-    this.particles = new THREE.Points(
-      pGeo,
-      new THREE.ShaderMaterial({
-        vertexShader: `
-          attribute float size;
-          attribute float seed;
-          uniform float uTime;
-          varying float vSeed;
-          void main() {
-            vSeed = seed;
-            vec3 p = position;
-            p.y += sin(uTime * 0.2 + seed * 6.28 + position.x * 0.3) * 0.4;
-            p.x += sin(uTime * 0.15 + seed * 4.2) * 0.3;
-            p.z += cos(uTime * 0.18 + seed * 5.1) * 0.3;
-            vec4 mv = modelViewMatrix * vec4(p, 1.0);
-            gl_PointSize = size * (120.0 / -mv.z);
-            gl_Position = projectionMatrix * mv;
-          }
-        `,
-        fragmentShader: `
-          varying float vSeed;
-          uniform float uTime;
-          void main() {
-            float d = length(gl_PointCoord - 0.5);
-            if (d > 0.5) discard;
-            float a = smoothstep(0.5, 0.0, d);
-            float hue = vSeed;
-            vec3 col;
-            if (hue < 0.33) col = vec3(0.44, 0.66, 0.84);
-            else if (hue < 0.66) col = vec3(0.90, 0.71, 0.29);
-            else col = vec3(0.74, 0.52, 0.31);
-            float twinkle = 0.6 + 0.4 * sin(uTime * 1.5 + vSeed * 100.0);
-            gl_FragColor = vec4(col, a * 0.5 * twinkle);
-          }
-        `,
-        uniforms: { uTime: { value: 0 } },
-        transparent: true,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-      })
-    );
-    this.particles.frustumCulled = false;
-    this.scene.add(this.particles);
+    // Lights
+    const hemi = new THREE.HemisphereLight(0x6fa8d6, 0x1b5e20, 0.6);
+    this.scene.add(hemi);
+    const dir = new THREE.DirectionalLight(0xf7d98c, 0.3);
+    dir.position.set(10, 20, 10);
+    this.scene.add(dir);
   }
 
   override update({ t, dt, p, pointer }: UpdateArgs): void {
-    this.smoothedP += (p - this.smoothedP) * Math.min(1, dt * 5);
-    const sp = this.smoothedP;
+    // Auto-rotate the tree slowly
+    this.treeAngle += dt * 0.15;
+    this.treeGroup.rotation.y = this.treeAngle + pointer.nx * 0.2;
 
-    // Orbit camera around the tree — sweeter path
-    const angle = sp * Math.PI * 2.4 + pointer.nx * 0.3;
-    const radius = 20 + pointer.ny * 2;
-    const height = -6 + sp * 12 + Math.sin(sp * Math.PI * 2) * 1.5;
+    // Slight tilt with pointer
+    this.treeGroup.rotation.x = pointer.ny * -0.05;
+
+    // Camera arcs around
+    const sp = p;
+    const radius = 24 + pointer.ny * 1.5;
+    const height = 2 + sp * 8 + Math.sin(sp * Math.PI * 2) * 1.0;
+    const camAngle = sp * Math.PI * 2.0 + pointer.nx * 0.2;
     this.camera.position.set(
-      Math.cos(angle) * radius,
+      Math.cos(camAngle) * radius,
       height,
-      Math.sin(angle) * radius
+      Math.sin(camAngle) * radius
     );
-    this.camera.lookAt(0, height * 0.5 + 0.5, 0);
+    this.camera.lookAt(0, height * 0.3 + 1.5, 0);
 
-    // Spin pillar glow
-    this.treeMat.uniforms.uTime.value = t;
+    // Animate trunk
+    this.trunkMat.uniforms.uTime.value = t;
 
-    // Pulse cards and labels
-    for (let i = 0; i < this.cards.length; i++) {
-      const mat = this.cards[i]!.material as THREE.ShaderMaterial;
-      mat.uniforms.uTime.value = t;
+    // Animate card materials
+    for (const m of this.cardMats) {
+      m.uniforms.uTime.value = t;
     }
-
-    // Update shimmer particles
-    const sm = this.shimmerParticles.material as THREE.ShaderMaterial;
-    sm.uniforms.uTime.value = t;
-
-    // Update particle time
-    const pMat = this.particles.material as THREE.ShaderMaterial;
-    pMat.uniforms.uTime.value = t;
   }
 }

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { FXScene, type UpdateArgs } from '../FXSceneManager';
+import { bus } from '~/lib/bus';
 
 function chipPoints(count: number): Float32Array {
   const pts = new Float32Array(count * 3);
@@ -284,6 +285,10 @@ export class ParticleMorph extends FXScene {
     }
     const e = this.assembled.value;
     const eased = e < 0.5 ? 4 * e * e * e : 1 - Math.pow(-2 * e + 2, 3) / 2;
+
+    // Focus level: how close the pointer is to the circuit center
+    const focusDist = Math.sqrt(pointer.nx * pointer.nx + pointer.ny * pointer.ny);
+    bus.focus = 1 - Math.min(1, focusDist * 3.5);
 
     const u = this.material.uniforms;
     u.uTime.value = t;

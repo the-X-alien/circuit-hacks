@@ -60,33 +60,43 @@ void main() {
   vec2 uv = vUv;
   vec2 aspect = vec2(uResolution.x / uResolution.y, 1.0);
 
-  // ── Full-screen cursor distortion (vividmotion.co level) ──
+  // ── Always-on organic distortion + cursor spike ────────────
   vec2 md = (uv - uMouse) * aspect;
   float mr = length(md);
-  float infl = smoothstep(0.45, 0.0, mr) * uMouseA;
 
-  // Radial displacement field
+  // Base displacement: always-active noise field across entire screen
+  float baseDisp = 0.015 + 0.010 * sin(uTime * 0.3 + uv.x * 7.0 + uv.y * 5.0);
+  float baseRipple = snoise(uv * 6.0 + uTime * 0.5) * 0.008;
+
+  // Cursor-driven spike on top
+  float cursorInfl = smoothstep(0.45, 0.0, mr) * uMouseA;
+  float infl = 0.08 + cursorInfl; // base 0.08 always active
+
   vec2 dir = mr > 1e-4 ? md / mr : vec2(0.0);
 
-  // Multi-band displacement: strong push + ripple + swirl + heat warp
-  float push = infl * 0.045;
-  float ripple = sin(mr * 42.0 - uTime * 4.5) * 0.015 * infl;
-  float swirl = sin(mr * 8.0 - uTime * 1.2 + atan(md.y, md.x)) * 0.010 * infl;
-  float heatWarp = snoise(uv * 12.0 + uTime * 0.8) * 0.006 * infl;
-  vec2 disp = dir * (push + ripple + heatWarp) + vec2(-dir.y, dir.x) * swirl;
+  float push = cursorInfl * 0.045;
+  float ripple = sin(mr * 42.0 - uTime * 4.5) * 0.015 * cursorInfl;
+  float swirl = (sin(mr * 8.0 - uTime * 1.2 + atan(md.y, md.x)) * 0.010 + baseRipple * 2.0) * cursorInfl;
+  float heatWarp = snoise(uv * 12.0 + uTime * 0.8) * 0.006 * cursorInfl;
+  vec2 cursorDisp = dir * (push + ripple + heatWarp) + vec2(-dir.y, dir.x) * swirl;
 
-  // Chromatic separation scales with distance from cursor + time oscillation
-  float caAmount = 0.008 + 0.025 * infl + 0.003 * sin(uTime * 1.5 + mr * 10.0) * infl;
+  // Always-on weak noise field across whole screen
+  vec2 baseNoise = vec2(
+    snoise(uv * 5.0 + vec2(uTime * 0.15, 0.0)),
+    snoise(uv * 5.0 + vec2(0.0, uTime * 0.15))
+  ) * baseDisp;
+
+  vec2 disp = cursorDisp + baseNoise;
+
+  // Chromatic separation: always-on base + cursor spike + edge weighting
+  float caDist = length(uv - 0.5);
+  float caBase = 0.006 + 0.010 * caDist * caDist + 0.004 * sin(uTime * 0.5 + uv.y * 4.0);
+  float caCursor = 0.025 * cursorInfl + 0.003 * sin(uTime * 1.5 + mr * 10.0) * cursorInfl;
+  float caAmount = caBase + caCursor;
 
   vec2 suvR = uv + disp + vec2(caAmount, 0.0);
   vec2 suvG = uv + disp;
   vec2 suvB = uv + disp - vec2(caAmount, 0.0);
-
-  // ── Edge-weighted chromatic aberration (always on) ─────────
-  float caDist = length(uv - 0.5);
-  float caEdge = 0.004 + 0.012 * caDist * caDist;
-  suvR += vec2(caEdge, 0.0);
-  suvB -= vec2(caEdge, 0.0);
 
   vec3 a, b, col;
   a.r = texture2D(tA, suvR).r;
@@ -102,19 +112,18 @@ void main() {
   vec3 bloomB = sampleBloom(tB, suvG, uResolution);
   col += mix(bloomA, bloomB, uMix) * 0.45;
 
-  // ── Metallic sheen that follows cursor ─────────────────────
+  // ── Metallic sheen (always-on base + cursor boost) ─────────
   vec3 sheenGold = vec3(0.96, 0.77, 0.38);
   vec3 sheenBlue = vec3(0.44, 0.66, 0.84);
   vec3 sheenBronze = vec3(0.74, 0.52, 0.31);
-  // Dynamic sheen mix that shifts with cursor proximity
-  float sheenMix = 0.5 + 0.5 * sin(uTime * 0.3 + uv.x * 3.0 + infl * 6.0);
-  float bronzeMix = 0.2 + 0.3 * infl;
+  float sheenMix = 0.5 + 0.5 * sin(uTime * 0.3 + uv.x * 3.0 + cursorInfl * 6.0);
+  float bronzeMix = 0.2 + 0.3 * cursorInfl;
   vec3 sheen = mix(mix(sheenGold, sheenBlue, sheenMix), sheenBronze, bronzeMix);
-  col += sheen * infl * 0.30;
-  col += vec3(0.12, 0.08, 0.04) * infl * 0.6;
+  col += sheen * (0.04 + cursorInfl * 0.26);
+  col += vec3(0.12, 0.08, 0.04) * (0.04 + cursorInfl * 0.56);
 
   // ── Cursor-edge glow ring ──────────────────────────────────
-  float ringGlow = exp(-abs(mr - 0.15) * 80.0) * infl * 0.12;
+  float ringGlow = exp(-abs(mr - 0.15) * 80.0) * cursorInfl * 0.12;
   col += sheenGold * ringGlow;
 
   // ── Scanline glow (subtle) ─────────────────────────────────
@@ -127,7 +136,7 @@ void main() {
   float glow = pow(max(0.0, 1.0 - distance(uv, vec2(0.5, -0.35)) * 0.85), 3.0);
   float glowPulse = 0.5 + 0.5 * sin(uTime * 0.1);
   vec3 glowCol = mix(vec3(0.10, 0.055, 0.015), vec3(0.03, 0.08, 0.12), glowPulse);
-  col += glowCol * glow * (1.0 + infl * 0.5);
+  col += glowCol * glow * (1.0 + cursorInfl * 0.5);
 
   // ── Vignette ───────────────────────────────────────────────
   float d = length((uv - 0.5) * aspect * 1.1);
