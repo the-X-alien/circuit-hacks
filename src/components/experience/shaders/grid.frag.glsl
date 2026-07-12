@@ -15,7 +15,7 @@ void main() {
   // Traveling energy wave along the floor
   float wave = sin(dist * 0.14 - uTime * 1.6) * 0.5 + 0.5;
 
-  vec3 col = mix(vec3(0.04, 0.35, 0.55), vec3(0.32, 0.18, 0.75), clamp(vWorld.z * -0.004, 0.0, 1.0));
+  vec3 col = mix(vec3(0.16, 0.38, 0.52), vec3(0.45, 0.30, 0.13), clamp(vWorld.z * -0.004, 0.0, 1.0));
   col *= line * fade * (0.55 + 0.9 * wave) * uBrightness;
 
   gl_FragColor = vec4(col, 1.0);

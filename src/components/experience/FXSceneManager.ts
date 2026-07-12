@@ -28,7 +28,7 @@ export abstract class FXScene {
 
   render(renderer: THREE.WebGLRenderer, target: THREE.WebGLRenderTarget): void {
     renderer.setRenderTarget(target);
-    renderer.setClearColor(0x0a0a0a, 1);
+    renderer.setClearColor(0x0c0b09, 1);
     renderer.clear();
     renderer.render(this.scene, this.camera);
   }
@@ -80,6 +80,8 @@ export class FXSceneManager {
         uDim: { value: 1 },
         uTime: { value: 0 },
         uResolution: { value: new THREE.Vector2(w, h) },
+        uMouse: { value: new THREE.Vector2(0.5, 0.5) },
+        uMouseA: { value: 0 },
       },
       depthTest: false,
       depthWrite: false,
@@ -95,21 +97,33 @@ export class FXSceneManager {
     this.material.uniforms.uResolution.value.set(w, h);
   }
 
+  private prevMouse = new THREE.Vector2(0.5, 0.5);
+
   render(
     renderer: THREE.WebGLRenderer,
     sceneA: FXScene,
     sceneB: FXScene | null,
     mix: number,
     dim: number,
-    time: number
+    time: number,
+    pointer: { nx: number; ny: number }
   ): void {
     sceneA.render(renderer, this.rtA);
     if (sceneB && mix > 0.001) {
       sceneB.render(renderer, this.rtB);
     }
-    this.material.uniforms.uMix.value = sceneB ? mix : 0;
-    this.material.uniforms.uDim.value = dim;
-    this.material.uniforms.uTime.value = time;
+    const u = this.material.uniforms;
+    u.uMix.value = sceneB ? mix : 0;
+    u.uDim.value = dim;
+    u.uTime.value = time;
+    const tu = u.uMouse.value as THREE.Vector2;
+    const tx = pointer.nx * 0.5 + 0.5;
+    const ty = pointer.ny * 0.5 + 0.5;
+    tu.x += (tx - tu.x) * 0.18;
+    tu.y += (ty - tu.y) * 0.18;
+    const moved = Math.hypot(tx - this.prevMouse.x, ty - this.prevMouse.y);
+    this.prevMouse.set(tx, ty);
+    u.uMouseA.value = Math.min(1, (u.uMouseA.value as number) * 0.92 + moved * 6.0);
     renderer.setRenderTarget(null);
     renderer.render(this.compositeScene, this.compositeCamera);
   }

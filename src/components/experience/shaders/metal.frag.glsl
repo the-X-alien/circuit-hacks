@@ -10,10 +10,10 @@ void main() {
   vec3 col = texture2D(uMatcap, muv).rgb;
 
   float fres = pow(1.0 - max(dot(n, normalize(vViewDir)), 0.0), 3.0);
-  col += vec3(0.31, 0.89, 1.0) * fres * 0.65;
+  col += vec3(0.95, 0.75, 0.35) * fres * 0.65;
 
   // Ridges catch violet light
-  col += vec3(0.5, 0.32, 1.0) * smoothstep(0.04, 0.28, vDisp) * 0.30;
+  col += vec3(0.74, 0.52, 0.30) * smoothstep(0.04, 0.28, vDisp) * 0.30;
 
   gl_FragColor = vec4(col, 1.0);
 }

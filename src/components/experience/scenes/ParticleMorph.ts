@@ -1,12 +1,6 @@
 import * as THREE from 'three';
 import { FXScene, type UpdateArgs } from '../FXSceneManager';
-import vert from '../shaders/particles.vert.glsl';
-import frag from '../shaders/particles.frag.glsl';
 
-/**
- * Generates target points shaped like a microchip glyph: die, pads,
- * pins and radiating circuit traces. All procedural — no assets.
- */
 function chipPoints(count: number): Float32Array {
   const pts = new Float32Array(count * 3);
   const rand = (a: number, b: number) => a + Math.random() * (b - a);
@@ -22,8 +16,7 @@ function chipPoints(count: number): Float32Array {
   let i = 0;
   const take = (frac: number) => Math.floor(count * frac);
 
-  // Body outline (square perimeter)
-  for (const end = i + take(0.2); i < end; i++) {
+  for (const end = i + take(0.15); i < end; i++) {
     const side = Math.floor(Math.random() * 4);
     if (side === 0) onSegment(i, -HALF, HALF, HALF, HALF);
     else if (side === 1) onSegment(i, HALF, HALF, HALF, -HALF);
@@ -31,9 +24,8 @@ function chipPoints(count: number): Float32Array {
     else onSegment(i, -HALF, -HALF, -HALF, HALF);
   }
 
-  // Inner die outline
   const DIE = 1.3;
-  for (const end = i + take(0.1); i < end; i++) {
+  for (const end = i + take(0.08); i < end; i++) {
     const side = Math.floor(Math.random() * 4);
     if (side === 0) onSegment(i, -DIE, DIE, DIE, DIE);
     else if (side === 1) onSegment(i, DIE, DIE, DIE, -DIE);
@@ -41,7 +33,6 @@ function chipPoints(count: number): Float32Array {
     else onSegment(i, -DIE, -DIE, -DIE, DIE);
   }
 
-  // Pad grid between die and body
   const padCoords: [number, number][] = [];
   for (let px = -2.2; px <= 2.2; px += 1.1) {
     for (let py = -2.2; py <= 2.2; py += 1.1) {
@@ -49,7 +40,7 @@ function chipPoints(count: number): Float32Array {
       padCoords.push([px, py]);
     }
   }
-  for (const end = i + take(0.15); i < end; i++) {
+  for (const end = i + take(0.12); i < end; i++) {
     const [px, py] = padCoords[Math.floor(Math.random() * padCoords.length)]!;
     const a = Math.random() * Math.PI * 2;
     const r = Math.sqrt(Math.random()) * 0.22;
@@ -58,7 +49,6 @@ function chipPoints(count: number): Float32Array {
     pts[i * 3 + 2] = rand(-0.1, 0.1);
   }
 
-  // Pins: short stubs leaving each side
   const PINS = 7;
   const pinEnds: [number, number, number, number][] = [];
   for (let s = 0; s < 4; s++) {
@@ -75,22 +65,8 @@ function chipPoints(count: number): Float32Array {
     onSegment(i, ax, ay, bx, by);
   }
 
-  // Traces: elbow lines continuing from pin tips outward
-  const traces: [number, number, number, number][] = [];
-  for (const [, , bx, by] of pinEnds) {
-    const horizontal = Math.abs(bx) > Math.abs(by);
-    const len = rand(1.2, 3.4);
-    const ex = horizontal ? bx + Math.sign(bx) * len : bx;
-    const ey = horizontal ? by : by + Math.sign(by) * len;
-    traces.push([bx, by, ex, ey]);
-    // elbow bend
-    const bend = rand(0.8, 2.2) * (Math.random() > 0.5 ? 1 : -1);
-    const fx = horizontal ? ex : ex + bend;
-    const fy = horizontal ? ey + bend : ey;
-    traces.push([ex, ey, fx, fy]);
-  }
   for (; i < count; i++) {
-    const [ax, ay, bx, by] = traces[Math.floor(Math.random() * traces.length)]!;
+    const [ax, ay, bx, by] = pinEnds[Math.floor(Math.random() * pinEnds.length)]!;
     onSegment(i, ax, ay, bx, by);
   }
 
@@ -99,6 +75,7 @@ function chipPoints(count: number): Float32Array {
 
 export class ParticleMorph extends FXScene {
   private material!: THREE.ShaderMaterial;
+  private glowMaterial!: THREE.ShaderMaterial;
   private group = new THREE.Group();
   private assembled = { value: 0 };
   private started = false;
@@ -106,12 +83,13 @@ export class ParticleMorph extends FXScene {
   override init(renderer: THREE.WebGLRenderer, lite: boolean): void {
     super.init(renderer, lite);
     const count = lite ? 14000 : 42000;
+    const glowCount = Math.floor(count * 0.12);
 
     const geo = new THREE.BufferGeometry();
     const start = new Float32Array(count * 3);
     const rands = new Float32Array(count);
+    const sizes = new Float32Array(count);
     for (let i = 0; i < count; i++) {
-      // chaotic start: shell around the camera frustum
       const r = 9 + Math.random() * 22;
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
@@ -119,6 +97,7 @@ export class ParticleMorph extends FXScene {
       start[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
       start[i * 3 + 2] = r * Math.cos(phi) - 6;
       rands[i] = Math.random();
+      sizes[i] = 0.6 + Math.random() * 2.4;
     }
     geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * 3), 3));
     geo.setAttribute('aStart', new THREE.BufferAttribute(start, 3));
@@ -127,16 +106,79 @@ export class ParticleMorph extends FXScene {
     geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 60);
 
     this.material = new THREE.ShaderMaterial({
-      vertexShader: vert,
-      fragmentShader: frag,
+      vertexShader: `
+        uniform float uTime;
+        uniform float uProgress;
+        uniform float uScatter;
+        uniform vec2 uPointer;
+        uniform float uPixelRatio;
+
+        attribute vec3 aStart;
+        attribute vec3 aTarget;
+        attribute float aRand;
+
+        varying float vAlpha;
+        varying float vSize;
+
+        vec3 wobble(vec3 p, float t, float r) {
+          return vec3(
+            sin(t * 0.6 + r * 17.0 + p.y * 0.8),
+            cos(t * 0.5 + r * 23.0 + p.x * 0.7),
+            sin(t * 0.7 + r * 11.0 + p.z * 0.9)
+          );
+        }
+
+        void main() {
+          vec3 pos = mix(aStart, aTarget, uProgress);
+          float j = mix(0.55, 0.05, uProgress);
+          pos += wobble(pos, uTime + aRand * 10.0, aRand) * j;
+
+          vec3 dir = normalize(pos + vec3(0.0001));
+          pos += dir * uScatter * (6.0 + aRand * 18.0);
+          pos.z += uScatter * (12.0 + aRand * 24.0);
+
+          vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+
+          vec2 scr = mv.xy / max(0.001, -mv.z);
+          float d = distance(scr, uPointer * 0.55);
+          float force = smoothstep(0.28, 0.0, d);
+          mv.xy += normalize(scr - uPointer * 0.55 + 0.0001) * force * 1.4;
+
+          gl_Position = projectionMatrix * mv;
+          float baseSize = 1.1 + aRand * 2.4;
+          float growth = 1.0 + 0.4 * (1.0 - uProgress);
+          gl_PointSize = baseSize * growth * uPixelRatio * (30.0 / max(0.001, -mv.z));
+
+          vAlpha = (0.5 + 0.5 * sin(uTime * (0.4 + aRand * 0.8) + aRand * 40.0)) * (1.0 - uScatter * 0.9);
+          vSize = baseSize;
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 uColorA;
+        uniform vec3 uColorB;
+        uniform float uTime;
+
+        varying float vAlpha;
+        varying float vSize;
+
+        void main() {
+          vec2 c = gl_PointCoord - 0.5;
+          float d = length(c);
+          float a = smoothstep(0.5, 0.04, d);
+          float core = smoothstep(0.2, 0.0, d);
+          vec3 col = mix(uColorA, uColorB, c.y * 0.5 + 0.5 * sin(c.x * 3.0 + uTime));
+          col += vec3(1.0) * core * 0.35;
+          gl_FragColor = vec4(col, a * vAlpha);
+        }
+      `,
       uniforms: {
         uTime: { value: 0 },
         uProgress: { value: 0 },
         uScatter: { value: 0 },
         uPointer: { value: new THREE.Vector2() },
         uPixelRatio: { value: Math.min(window.devicePixelRatio, 2) },
-        uColorA: { value: new THREE.Color(0x4fe3ff) },
-        uColorB: { value: new THREE.Color(0x8b5bff) },
+        uColorA: { value: new THREE.Color(0xe6b54a) },
+        uColorB: { value: new THREE.Color(0x6fa8d6) },
       },
       transparent: true,
       depthWrite: false,
@@ -146,6 +188,78 @@ export class ParticleMorph extends FXScene {
     const points = new THREE.Points(geo, this.material);
     points.frustumCulled = false;
     this.group.add(points);
+
+    // Glow particle halo — larger, dimmer particles orbiting
+    this.glowMaterial = new THREE.ShaderMaterial({
+      vertexShader: `
+        uniform float uTime;
+        uniform float uProgress;
+        uniform float uPixelRatio;
+
+        attribute vec3 aStart;
+        attribute vec3 aTarget;
+        attribute float aRand;
+
+        varying float vAlpha;
+
+        void main() {
+          vec3 pos = mix(aStart, aTarget, uProgress);
+          float j = mix(0.8, 0.1, uProgress);
+          pos.x += sin(uTime * 0.3 + aRand * 30.0) * j;
+          pos.y += cos(uTime * 0.25 + aRand * 20.0) * j;
+          pos.z += sin(uTime * 0.35 + aRand * 40.0) * j;
+
+          vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+          gl_Position = projectionMatrix * mv;
+          gl_PointSize = (3.0 + aRand * 5.0) * uPixelRatio * (25.0 / max(0.001, -mv.z));
+
+          float pulse = 0.5 + 0.5 * sin(uTime * 0.5 + aRand * 60.0);
+          vAlpha = (0.08 + 0.12 * pulse) * (1.0 - uProgress * 0.5);
+        }
+      `,
+      fragmentShader: `
+        varying float vAlpha;
+        void main() {
+          vec2 c = gl_PointCoord - 0.5;
+          float d = length(c);
+          float a = smoothstep(0.5, 0.0, d);
+          gl_FragColor = vec4(0.7, 0.55, 0.25, a * vAlpha * 0.3);
+        }
+      `,
+      uniforms: {
+        uTime: { value: 0 },
+        uProgress: { value: 0 },
+        uPixelRatio: { value: Math.min(window.devicePixelRatio, 2) },
+      },
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+
+    const glowGeo = new THREE.BufferGeometry();
+    const gStart = new Float32Array(glowCount * 3);
+    const gTarget = new Float32Array(glowCount * 3);
+    const gRand = new Float32Array(glowCount);
+    for (let i = 0; i < glowCount; i++) {
+      const r = 12 + Math.random() * 28;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      gStart[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      gStart[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      gStart[i * 3 + 2] = r * Math.cos(phi) - 8;
+      gTarget[i * 3] = (Math.random() - 0.5) * 14;
+      gTarget[i * 3 + 1] = (Math.random() - 0.5) * 14;
+      gTarget[i * 3 + 2] = (Math.random() - 0.5) * 4;
+      gRand[i] = Math.random();
+    }
+    glowGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(glowCount * 3), 3));
+    glowGeo.setAttribute('aStart', new THREE.BufferAttribute(gStart, 3));
+    glowGeo.setAttribute('aTarget', new THREE.BufferAttribute(gTarget, 3));
+    glowGeo.setAttribute('aRand', new THREE.BufferAttribute(gRand, 1));
+    const glowPoints = new THREE.Points(glowGeo, this.glowMaterial);
+    glowPoints.frustumCulled = false;
+    this.group.add(glowPoints);
+
     this.scene.add(this.group);
     this.camera.position.set(0, 0, 13);
 
@@ -154,12 +268,10 @@ export class ParticleMorph extends FXScene {
       this.started = true;
     };
     window.addEventListener('site:enter', begin, { once: true });
-    // Fallback if the preloader event never fires
     setTimeout(begin, 5000);
   }
 
   override update({ t, dt, scroll, vh, pointer }: UpdateArgs): void {
-    // Assembly ease-in after the preloader lifts
     if (this.started && this.assembled.value < 1) {
       this.assembled.value = Math.min(1, this.assembled.value + dt * 0.45);
     }
@@ -171,6 +283,9 @@ export class ParticleMorph extends FXScene {
     u.uProgress.value = eased;
     u.uScatter.value = Math.min(1, Math.max(0, scroll / (vh * 0.9)));
     (u.uPointer.value as THREE.Vector2).set(pointer.nx, pointer.ny);
+
+    this.glowMaterial.uniforms.uTime.value = t;
+    this.glowMaterial.uniforms.uProgress.value = eased;
 
     this.group.rotation.y = Math.sin(t * 0.1) * 0.12 + pointer.nx * 0.14;
     this.group.rotation.x = pointer.ny * -0.08;

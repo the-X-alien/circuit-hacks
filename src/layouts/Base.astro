@@ -1,6 +1,8 @@
 ---
-import '@fontsource-variable/inter';
-import '@fontsource-variable/space-grotesk';
+import '@fontsource-variable/bricolage-grotesque';
+import '@fontsource-variable/hanken-grotesk';
+import '@fontsource/space-mono/400.css';
+import '@fontsource/space-mono/700.css';
 import '~/styles/global.css';
 import { EVENT_NAME, SITE_DESCRIPTION, EVENT_LOCATION } from '~/config';
 
@@ -9,6 +11,8 @@ interface Props {
 }
 
 const { title = `${EVENT_NAME} — 24-Hour Hardware Hackathon, ${EVENT_LOCATION}` } = Astro.props;
+
+const favicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none"><rect x="10" y="10" width="20" height="20" rx="3.5" stroke="%23e6b54a" stroke-width="2"/><g stroke="%23e6b54a" stroke-width="2" stroke-linecap="round"><path d="M10 16H4M10 20H4M10 24H4"/><path d="M30 16H36M30 20H36M30 24H36"/><path d="M16 10V4M20 10V4M24 10V4"/><path d="M16 30V36M20 30V36M24 30V36"/></g><circle cx="14.5" cy="14.5" r="1.7" fill="%23f7d98c"/><path d="M21.5 12.5 16.5 21 20.5 21 18 27.5" stroke="%23f7d98c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 ---
 
 <!doctype html>
@@ -21,12 +25,10 @@ const { title = `${EVENT_NAME} — 24-Hour Hardware Hackathon, ${EVENT_LOCATION}
     <meta property="og:title" content={title} />
     <meta property="og:description" content={SITE_DESCRIPTION} />
     <meta property="og:type" content="website" />
-    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="theme-color" content="#0c0b09" />
     <link
       rel="icon"
-      href={`data:image/svg+xml,${encodeURIComponent(
-        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect x="8" y="8" width="16" height="16" rx="2" fill="none" stroke="#4fe3ff" stroke-width="2"/><rect x="13" y="13" width="6" height="6" fill="#8b5bff"/><path d="M12 8V3M16 8V3M20 8V3M12 29v-5M16 29v-5M20 29v-5M8 12H3M8 16H3M8 20H3M29 12h-5M29 16h-5M29 20h-5" stroke="#4fe3ff" stroke-width="1.6"/></svg>`
-      )}`}
+      href={`data:image/svg+xml,${encodeURIComponent(favicon)}`}
     />
     <script is:inline>
       document.documentElement.classList.remove('no-js');

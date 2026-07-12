@@ -206,7 +206,15 @@ export default function Experience() {
       }
 
       const dim = (DIM[a.key] ?? 1) * (1 - mix) + (DIM[b?.key ?? a.key] ?? 1) * mix;
-      manager.render(renderer, a.scene, b && b.scene !== a.scene ? b.scene : null, mix, dim, time);
+      manager.render(
+        renderer,
+        a.scene,
+        b && b.scene !== a.scene ? b.scene : null,
+        mix,
+        dim,
+        time,
+        smoothedPointer
+      );
 
       if (!readySignaled) {
         readySignaled = true;

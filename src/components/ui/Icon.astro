@@ -1,0 +1,37 @@
+---
+interface Props {
+  name: string;
+  size?: number;
+  class?: string;
+}
+const { name, size = 24, class: cls = '' } = Astro.props;
+
+const PATHS: Record<string, string> = {
+  laptop: '<rect x="5" y="4.5" width="14" height="10" rx="1.5"/><path d="M2.5 19.5h19"/><path d="M9 19.5l1.6-2.5M15 19.5l-1.6-2.5"/>',
+  id: '<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="8.5" cy="12" r="2.2"/><path d="M13 10h5M13 14h4"/>',
+  doc: '<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M9.5 12h6M9.5 15h6M9.5 18h4"/>',
+  bed: '<path d="M3 18v-8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8"/><path d="M3 18h18"/><path d="M3 14h18"/><circle cx="8" cy="11" r="1"/>',
+  brush: '<path d="M10 3h4v3h-4z"/><path d="M9 6h6v12a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/><path d="M10.5 11h3"/>',
+  hoodie: '<path d="M8 4l4 3 4-3"/><path d="M8 4c-2 1-3 3-3 6v10h5v-5h6v5h5V10c0-3-1-5-3-6"/>',
+  headphones: '<path d="M5 13v-1a7 7 0 0 1 14 0v1"/><rect x="3" y="13" width="4" height="7" rx="1.5"/><rect x="17" y="13" width="4" height="7" rx="1.5"/>',
+  chip: '<rect x="7" y="7" width="10" height="10" rx="1.5"/><rect x="10" y="10" width="4" height="4"/><path d="M10 7V4M14 7V4M10 20v-3M14 20v-3M7 10H4M7 14H4M20 10h-3M20 14h-3"/>',
+  arrow: '<path d="M4 12h15M13 6l6 6-6 6"/>',
+  heart: '<path d="M12 20s-7-4.4-7-9.2A3.8 3.8 0 0 1 12 7a3.8 3.8 0 0 1 7 3.8C19 15.6 12 20 12 20z"/>',
+};
+
+const body = PATHS[name] || PATHS.chip;
+---
+
+<svg
+  class={cls}
+  width={size}
+  height={size}
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.6"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  aria-hidden="true"
+  set:html={body}
+/>

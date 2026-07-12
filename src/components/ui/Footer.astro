@@ -1,5 +1,6 @@
 ---
 import { EVENT_NAME, EVENT_DATE, EVENT_LOCATION, CONTACT_URL, GENERAL_EMAIL, SPONSOR_EMAIL } from '~/config';
+import Icon from './Icon.astro';
 
 const year = new Date().getFullYear();
 ---
@@ -16,6 +17,14 @@ const year = new Date().getFullYear();
       <a href={`mailto:${SPONSOR_EMAIL}`}>Sponsor inquiries</a>
       <a href="#top" data-anchor>Back to top ↑</a>
     </nav>
+    <p class="credit">
+      Made with <Icon name="heart" size={14} class="credit-heart" /> by
+      <a href="https://github.com/Learning-howto-Code" target="_blank" rel="noopener">Learning-howto-Code</a>
+      (<a href="https://www.linkedin.com/in/jake-hopkins-72abb039a/" target="_blank" rel="noopener">Jake Hopkins</a>)
+      and
+      <a href="https://github.com/the-X-alien" target="_blank" rel="noopener">the-X-alien</a>
+      (<a href="https://www.linkedin.com/in/dhiaan/" target="_blank" rel="noopener">Dhiaan Dave</a>)
+    </p>
     <p class="mono fine">
       © {year} — Built by student organizers. Code of conduct applies to all attendees, mentors,
       and organizers.
@@ -68,12 +77,39 @@ const year = new Date().getFullYear();
   }
 
   .footer-links a:hover {
-    color: var(--cyan);
+    color: var(--gold);
   }
 
   .fine {
     font-size: 0.65rem;
     letter-spacing: 0.08em;
     color: var(--ink-faint);
+  }
+
+  .credit {
+    font-size: 0.78rem;
+    letter-spacing: 0.02em;
+    color: var(--ink-dim);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .credit a {
+    color: var(--ink);
+    text-decoration: none;
+    border-bottom: 1px solid var(--line-strong);
+    transition: color 0.3s ease, border-color 0.3s ease;
+  }
+
+  .credit a:hover {
+    color: var(--gold);
+    border-color: var(--gold);
+  }
+
+  .credit-heart {
+    color: var(--gold);
+    margin: 0 0.1rem;
   }
 </style>

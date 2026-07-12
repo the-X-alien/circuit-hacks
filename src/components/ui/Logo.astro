@@ -1,0 +1,98 @@
+---
+interface Props {
+  showWordmark?: boolean;
+  markClass?: string;
+  wordmarkClass?: string;
+  /** stroke color for the die + pins; defaults to currentColor */
+  color?: string;
+  size?: number;
+}
+const {
+  showWordmark = true,
+  markClass = '',
+  wordmarkClass = '',
+  color = 'currentColor',
+  size = 32,
+} = Astro.props;
+---
+
+<span class="ch-logo">
+  <svg
+    class={`ch-mark ${markClass}`}
+    viewBox="0 0 40 40"
+    width={size}
+    height={size}
+    fill="none"
+    aria-hidden="true"
+    style={`color:${color}`}
+  >
+    <!-- die -->
+    <rect x="10" y="10" width="20" height="20" rx="3.5" stroke="currentColor" stroke-width="2" />
+    <!-- pins: left / right / top / bottom -->
+    <g stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <path d="M10 16H4M10 20H4M10 24H4" />
+      <path d="M30 16H36M30 20H36M30 24H36" />
+      <path d="M16 10V4M20 10V4M24 10V4" />
+      <path d="M16 30V36M20 30V36M24 30V36" />
+    </g>
+    <!-- pin-1 node -->
+    <circle cx="14.5" cy="14.5" r="1.7" fill="var(--gold)" />
+    <!-- the spark: a bolt driven through the die -->
+    <path
+      class="ch-bolt"
+      d="M21.5 12.5 16.5 21 20.5 21 18 27.5"
+      stroke="var(--gold)"
+      stroke-width="2.2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </svg>
+  {
+    showWordmark && (
+      <span class={`ch-wordmark ${wordmarkClass}`}>
+        <span class="ch-w1">CIRCUIT</span>
+        <span class="ch-w2">HACKS</span>
+      </span>
+    )
+  }
+</span>
+
+<style>
+  .ch-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7rem;
+  }
+
+  .ch-mark {
+    flex: none;
+    display: block;
+  }
+
+  .ch-wordmark {
+    display: inline-flex;
+    flex-direction: column;
+    line-height: 0.92;
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .ch-w1 {
+    font-size: 0.78rem;
+    color: var(--ink);
+  }
+
+  .ch-w2 {
+    font-size: 0.78rem;
+    color: var(--gold);
+    letter-spacing: 0.22em;
+  }
+
+  @media (max-width: 520px) {
+    .ch-wordmark {
+      display: none;
+    }
+  }
+</style>

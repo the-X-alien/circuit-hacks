@@ -1,13 +1,15 @@
 ---
+import Icon from './Icon.astro';
+
 const bring = [
-  { icon: '💻', label: 'Laptop + charger', note: 'Any OS. We flash firmware from anything.' },
-  { icon: '🪪', label: 'Student ID', note: 'Or any proof you’re in grades 9–12.' },
-  { icon: '📄', label: 'Signed waiver', note: 'Emailed after you RSVP. Parent signature required.' },
-  { icon: '🛏️', label: 'Sleeping bag', note: 'Optional. The nap room has floor space and dim lights.' },
-  { icon: '🪥', label: 'Toiletries', note: 'Toothbrush, deodorant. Your teammates thank you.' },
-  { icon: '🧥', label: 'A hoodie', note: 'Venue AC does not negotiate at 3 a.m.' },
-  { icon: '🎧', label: 'Headphones', note: 'For lock-in mode.' },
-  { icon: '🔩', label: 'Your own parts', note: 'Optional. Anything pre-built must be declared at check-in.' },
+  { icon: 'laptop', label: 'Laptop + charger', note: 'Any OS. We flash firmware from anything.' },
+  { icon: 'id', label: 'Student ID', note: 'Or any proof you’re in grades 9–12.' },
+  { icon: 'doc', label: 'Signed waiver', note: 'Emailed after you RSVP. Parent signature required.' },
+  { icon: 'bed', label: 'Sleeping bag', note: 'Optional. The nap room has floor space and dim lights.' },
+  { icon: 'brush', label: 'Toiletries', note: 'Toothbrush, deodorant. Your teammates thank you.' },
+  { icon: 'hoodie', label: 'A hoodie', note: 'Venue AC does not negotiate at 3 a.m.' },
+  { icon: 'headphones', label: 'Headphones', note: 'For lock-in mode.' },
+  { icon: 'chip', label: 'Your own parts', note: 'Optional. Anything pre-built must be declared at check-in.' },
 ];
 
 const provided = [
@@ -32,13 +34,13 @@ const provided = [
         <ul class="bring-list">
           {
             bring.map((b) => (
-              <li data-reveal>
-                <span class="icon" aria-hidden="true">{b.icon}</span>
-                <div>
-                  <p class="item-label">{b.label}</p>
-                  <p class="item-note">{b.note}</p>
-                </div>
-              </li>
+               <li data-reveal>
+                 <span class="icon" aria-hidden="true"><Icon name={b.icon} size={26} /></span>
+                 <div>
+                   <p class="item-label">{b.label}</p>
+                   <p class="item-note">{b.note}</p>
+                 </div>
+               </li>
             ))
           }
         </ul>
@@ -69,7 +71,7 @@ const provided = [
     font-size: 0.72rem;
     letter-spacing: 0.3em;
     text-transform: uppercase;
-    color: var(--cyan);
+    color: var(--gold);
     margin-bottom: 1.6rem;
   }
 
@@ -87,9 +89,15 @@ const provided = [
   }
 
   .icon {
-    font-size: 1.2rem;
-    line-height: 1.5;
+    display: grid;
+    place-items: center;
+    width: 2.6rem;
+    height: 2.6rem;
     flex: none;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--gold);
+    background: rgba(230, 181, 74, 0.05);
   }
 
   .item-label {
@@ -118,7 +126,7 @@ const provided = [
 
   .provided-list li::before {
     content: '+ ';
-    color: var(--violet);
+    color: var(--blue);
     font-family: var(--font-mono);
   }
 

@@ -1,5 +1,6 @@
 ---
-import { EVENT_NAME, RSVP_URL } from '~/config';
+import { RSVP_URL } from '~/config';
+import Logo from './Logo.astro';
 
 const links = [
   { href: '#about', label: 'About' },
@@ -12,15 +13,7 @@ const links = [
 
 <header class="nav" id="site-nav">
   <a class="brand" href="#top" data-anchor>
-    <svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true">
-      <rect x="8" y="8" width="16" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"></rect>
-      <rect x="13" y="13" width="6" height="6" fill="currentColor"></rect>
-      <path
-        d="M12 8V4M16 8V4M20 8V4M12 28v-4M16 28v-4M20 28v-4M8 12H4M8 16H4M8 20H4M28 12h-4M28 16h-4M28 20h-4"
-        stroke="currentColor"
-        stroke-width="1.6"></path>
-    </svg>
-    <span class="mono">{EVENT_NAME}</span>
+    <Logo size={26} />
   </a>
   <nav aria-label="Sections">
     {links.map((l) => <a href={l.href} data-anchor>{l.label}</a>)}
@@ -74,7 +67,7 @@ const links = [
   }
 
   .brand svg {
-    color: var(--cyan);
+    color: var(--gold);
   }
 
   nav {

@@ -1,5 +1,5 @@
 {
-  "name": "hackathon-site",
+  "name": "circuit-hacks",
   "type": "module",
   "version": "0.1.0",
   "private": true,
@@ -17,8 +17,9 @@
     "three": "^0.178.0"
   },
   "devDependencies": {
-    "@fontsource-variable/inter": "^5.2.5",
-    "@fontsource-variable/space-grotesk": "^5.2.5",
+    "@fontsource-variable/bricolage-grotesque": "^5.2.5",
+    "@fontsource-variable/hanken-grotesk": "^5.2.5",
+    "@fontsource/space-mono": "^5.2.5",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "@types/three": "^0.178.0",
