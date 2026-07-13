@@ -80,69 +80,75 @@ export function initSite(): void {
     }
   });
 
-  // ── Fade-up reveals with variety ──────────────────────────────
-  const reveals = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal]'));
-  const heroReveals = reveals.filter((el) => el.closest('#top'));
-  const restReveals = reveals.filter((el) => !el.closest('#top'));
-
-  ScrollTrigger.batch(restReveals, {
-    start: 'top 89%',
-    once: true,
-    onEnter: (batch) => {
-      gsap.to(batch, {
-        opacity: 1,
-        y: 0,
-        duration: 1.1,
-        stagger: (i) => Math.min(0.06 + i * 0.05, 0.25),
-        ease: 'power3.out',
-        overwrite: true,
-      });
-      // Subtle parallax on section headings
-      batch.forEach((el) => {
-        if (el.matches('h2, .kicker, .display-lg, .display-md')) {
-          gsap.fromTo(el, { scale: 0.96, filter: 'blur(4px)' }, {
-            scale: 1,
-            filter: 'blur(0px)',
-            duration: 1.4,
-            ease: 'power4.out',
-            scrollTrigger: { trigger: el, start: 'top 86%', once: true },
-            overwrite: true,
-          });
+  // ── Section titles light up (and stay lit) once scrolled into view ──
+  // IntersectionObserver reacts to the real painted position, so it works
+  // regardless of ScrollSmoother's transform-based virtual scroll.
+  const litObserver = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) {
+          e.target.classList.add('title-lit');
+          litObserver.unobserve(e.target);
         }
-        // Cards stagger with a slight rotation reveal
-        if (el.matches('.card, .logo-slot')) {
-          gsap.fromTo(el, { rotateX: 6 }, {
-            rotateX: 0,
-            duration: 1.2,
-            ease: 'power3.out',
-            scrollTrigger: { trigger: el, start: 'top 88%', once: true },
-            overwrite: true,
-          });
-        }
-      });
+      }
     },
+    { threshold: 0.4 }
+  );
+  document.querySelectorAll('[data-split]').forEach((el) => {
+    if (!el.closest('#top')) litObserver.observe(el);
   });
+
+  // ── Fade-up reveals (robust: a section can never stay blank) ──
+  // Driven directly off scroll position + a hard safety net, so it does not
+  // depend on ScrollTrigger start calculations that can misfire under
+  // ScrollSmoother's transform-based virtual scroll.
+  const allReveals = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal]'));
+  const heroReveals = allReveals.filter((el) => el.closest('#top'));
+  const restReveals = allReveals.filter((el) => !el.closest('#top'));
+  // Pure CSS-class reveal — the fade is a CSS transition (compositor-driven),
+  // so it does not depend on the gsap ticker running. A section can never stay
+  // blank: an IntersectionObserver reveals on scroll, a scroll-frame sweep backs
+  // it up, and a timeout guarantees everything is shown regardless.
+  const reveal = (el: HTMLElement) => el.classList.add('is-in');
+
+  const revealVisible = () => {
+    const vh = window.innerHeight;
+    for (const el of restReveals) {
+      if (el.classList.contains('is-in')) continue;
+      const r = el.getBoundingClientRect();
+      if (r.top < vh * 0.92 && r.bottom > 0) reveal(el);
+    }
+  };
+
+  const revObserver = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) {
+          reveal(e.target as HTMLElement);
+          revObserver.unobserve(e.target);
+        }
+      }
+    },
+    { threshold: 0.12, rootMargin: '0px 0px -8% 0px' }
+  );
+  restReveals.forEach((el) => revObserver.observe(el));
+
+  // Backups: sweep on every scroll frame + guarantee everything after 3.5s.
+  ScrollTrigger.create({ start: 0, end: 'max', onUpdate: revealVisible, onRefresh: revealVisible });
+  revealVisible();
+  setTimeout(revealVisible, 800);
+  setTimeout(() => restReveals.forEach(reveal), 3500);
 
   // ── Hero entrance, released by the preloader ──────────────────
   const enterHero = () => {
     splitTweens.forEach((play) => play());
-    gsap.to(heroReveals, {
-      opacity: 1,
-      y: 0,
-      duration: 1.2,
-      stagger: (i) => 0.08 + i * 0.06,
-      delay: 0.35,
-      ease: 'power3.out',
+    heroReveals.forEach((el, i) => {
+      setTimeout(() => el.classList.add('is-in'), 300 + i * 90);
     });
-    // Hero kicker entrance from above
-    const kicker = document.querySelector('#top .kicker');
-    if (kicker) {
-      gsap.fromTo(kicker, { y: -20, opacity: 0 }, {
-        y: 0, opacity: 1, duration: 0.8, delay: 0.1, ease: 'power2.out',
-      });
-    }
   };
   window.addEventListener('site:enter', enterHero, { once: true });
+  // Fallback in case the preloader's site:enter fired before this listener.
+  setTimeout(() => heroReveals.forEach((el) => el.classList.add('is-in')), 2500);
 
   // Layout can shift as fonts land + islands hydrate
   document.fonts?.ready.then(() => ScrollTrigger.refresh());

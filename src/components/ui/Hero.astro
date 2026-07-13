@@ -22,7 +22,7 @@ const half = Math.floor(chars.length / 2);
       <span>HIGH SCHOOL HARDWARE HACKATHON</span>
     </p>
     <h1 class="display-xl" data-hero-title>
-      <span class="accent" data-hero-chars>
+      <span class="hero-highlight" data-hero-chars>
         {chars.map((ch, i) => (
           <span class="hero-char" data-i={i} style={`--i: ${i}; --mid: ${Math.abs(i - half)}`}>
             {ch === ' ' ? '\u00A0' : ch}
@@ -31,8 +31,8 @@ const half = Math.floor(chars.length / 2);
       </span>
     </h1>
     <p class="lede hero-lede" data-reveal>
-      <span class="accent-gold">{TAGLINE}</span> One secret track, sealed until the doors open. Build something that exists — then
-      make it blink, move, and think.
+      <span class="hl">{TAGLINE}</span> <span class="hl-dark">One secret track, sealed until the doors
+      open. Build something that exists — then make it blink, move, and think.</span>
     </p>
     <div class="hero-cta" data-reveal>
       <div class="cta-glow" aria-hidden="true"></div>
@@ -123,8 +123,22 @@ const half = Math.floor(chars.length / 2);
     margin-bottom: clamp(1.5rem, 3.5vh, 3rem);
   }
 
+  /* Solid gold highlight bar behind the title — dark ink, hugs the text,
+     clones cleanly across line breaks. */
+  .hero-highlight {
+    --hl-pad-x: clamp(0.12em, 0.3vw, 0.22em);
+    display: inline;
+    background: var(--gold);
+    color: #150f03;
+    padding: 0.04em var(--hl-pad-x);
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+    box-shadow: 0 0 60px -10px rgba(230, 181, 74, 0.5);
+  }
+
   .hero-char {
     display: inline-block;
+    color: #150f03;
     transition: opacity 0.15s ease;
     will-change: opacity;
   }

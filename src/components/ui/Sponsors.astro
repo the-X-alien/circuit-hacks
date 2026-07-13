@@ -1,106 +1,154 @@
 ---
 import { SPONSOR_EMAIL } from '~/config';
 
-// Placeholder slots — swap names/logos as sponsors sign on.
+// Tiers mirror covehacks.dev.
 const tiers = [
-  { tier: 'Title', slots: 2, size: 'lg' },
-  { tier: 'Core', slots: 4, size: 'md' },
-  { tier: 'Community', slots: 6, size: 'sm' },
+  { tier: 'Partner', color: 'var(--blue)' },
+  { tier: 'Gold', color: 'var(--gold)' },
+  { tier: 'Silver', color: '#c2ccd6' },
+  { tier: 'Bronze', color: 'var(--bronze)' },
+  { tier: 'In-Kind', color: '#7bc48a' },
 ];
 ---
 
 <section id="sponsors" class="section sponsors" data-scene="tree">
-  <div class="scrim">
+  <div class="sponsors-head scrim">
     <p class="kicker">08 — The Backers</p>
     <h2 class="display-lg" data-split>Powered by<br />people who build</h2>
     <p class="lede intro" data-reveal>
       Every free meal, free sensor, and free 3 a.m. snack exists because a company decided high
-      schoolers deserve real hardware. These slots are waiting for logos.
+      schoolers deserve real hardware. Scroll to move through the tiers, top down.
+      <span class="hl">Click any card</span> to see its placement full-size.
     </p>
-    {
-      tiers.map((t) => (
-        <div class="tier" data-reveal>
-          <p class="tier-name mono">{t.tier}</p>
-          <div class={`logos logos--${t.size}`}>
-            {Array.from({ length: t.slots }).map(() => (
-              <div class="logo-slot">
-                <span class="mono">YOUR LOGO</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))
-    }
+  </div>
+
+  <!-- The 3D sponsor carousel renders in the WebGL layer behind this space. -->
+  <div class="tree-stage" aria-hidden="true"></div>
+
+  <div class="sponsors-foot scrim">
+    <ul class="tier-legend" data-reveal>
+      {
+        tiers.map((t) => (
+          <li class="tier-legend-item">
+            <span class="tier-dot" style={`--dot: ${t.color}`} />
+            <span class="tier-legend-name mono">{t.tier}</span>
+          </li>
+        ))
+      }
+    </ul>
     <div class="sponsor-cta" data-reveal>
       <a class="btn btn--primary" href={`mailto:${SPONSOR_EMAIL}?subject=Sponsoring the hackathon`}>
-        Sponsor the event <span class="arrow">→</span>
+        Claim a slot <span class="arrow">→</span>
       </a>
-      <p class="mono note">Prospectus available on request · {SPONSOR_EMAIL}</p>
+      <p class="mono note">Prospectus on request · {SPONSOR_EMAIL}</p>
     </div>
   </div>
 </section>
 
+<!-- Expanded card overlay — opened when a 3D card is clicked -->
+<div class="sponsor-modal" id="sponsor-modal" hidden>
+  <div class="sponsor-modal-backdrop" data-close></div>
+  <div class="sponsor-modal-card" role="dialog" aria-modal="true" aria-label="Sponsor slot">
+    <button class="sponsor-modal-close" data-close aria-label="Close">×</button>
+    <p class="sponsor-modal-tier mono" id="sm-tier">TIER</p>
+    <p class="sponsor-modal-slot mono">Sponsorship tier</p>
+    <div class="sponsor-modal-logo">
+      <span class="mono">YOUR LOGO HERE</span>
+    </div>
+    <p class="sponsor-modal-foot mono">Prime placement · reserved for a backer</p>
+  </div>
+</div>
+
+<script>
+  const modal = document.getElementById('sponsor-modal')!;
+  const tierEl = document.getElementById('sm-tier')!;
+  const card = modal.querySelector<HTMLElement>('.sponsor-modal-card')!;
+
+  const open = (d: { tier: string; colorHex: string }) => {
+    tierEl.textContent = d.tier.toUpperCase();
+    card.style.setProperty('--tier-color', d.colorHex);
+    modal.hidden = false;
+    requestAnimationFrame(() => modal.classList.add('is-open'));
+  };
+  const close = () => {
+    modal.classList.remove('is-open');
+    setTimeout(() => (modal.hidden = true), 260);
+  };
+
+  window.addEventListener('sponsor:open', (e) => open((e as CustomEvent).detail));
+  modal.addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).closest('[data-close]')) close();
+  });
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.hidden) close();
+  });
+</script>
+
 <style>
+  .sponsors {
+    text-align: left;
+  }
+
   h2 {
     margin-bottom: clamp(1.5rem, 3vh, 2.5rem);
   }
 
   .intro {
-    margin-bottom: clamp(2.5rem, 5vh, 4rem);
+    margin-bottom: 0;
   }
 
-  .tier {
-    margin-bottom: 2.5rem;
+  /* Tall stage: scroll length gives each of the ~10 cards its own screen time
+     as the coverflow advances one-by-one. */
+  .tree-stage {
+    height: clamp(240vh, 340vh, 3200px);
+    pointer-events: none;
   }
 
-  .tier:nth-child(1) .tier-name { color: var(--gold); }
-  .tier:nth-child(2) .tier-name { color: var(--blue); }
-  .tier:nth-child(3) .tier-name { color: var(--bronze); }
+  .sponsors-foot {
+    display: flex;
+    flex-direction: column;
+    gap: 2.2rem;
+  }
 
-  .tier-name {
-    font-size: 0.68rem;
-    letter-spacing: 0.32em;
+  .tier-legend {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 1.4rem;
+    padding-top: 1.6rem;
+  }
+
+  .tier-legend-item {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.55rem;
+  }
+
+  .tier-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--dot);
+    box-shadow: 0 0 10px var(--dot);
+    align-self: center;
+    flex: none;
+  }
+
+  .tier-legend-name {
+    font-size: 0.74rem;
+    letter-spacing: 0.22em;
     text-transform: uppercase;
-    margin-bottom: 1rem;
+    color: var(--ink);
   }
 
-  .logos {
-    display: grid;
-    gap: 1rem;
-  }
-
-  .logos--lg { grid-template-columns: repeat(2, 1fr); }
-  .logos--md { grid-template-columns: repeat(4, 1fr); }
-  .logos--sm { grid-template-columns: repeat(6, 1fr); }
-
-  .logos--lg .logo-slot { border-color: rgba(230, 181, 74, 0.25); }
-  .logos--md .logo-slot { border-color: rgba(111, 168, 214, 0.25); }
-  .logos--sm .logo-slot { border-color: rgba(189, 133, 80, 0.25); }
-
-  .logo-slot {
-    display: grid;
-    place-items: center;
-    border: 1px dashed var(--line-strong);
-    border-radius: 12px;
-    aspect-ratio: 5 / 2;
-    transition: border-color 0.3s ease, background-color 0.3s ease;
-  }
-
-  .logos--lg .logo-slot { aspect-ratio: 4 / 1; }
-
-  .logo-slot:hover {
-    border-color: var(--gold);
-    background: rgba(230, 181, 74, 0.04);
-  }
-
-  .logo-slot span {
-    font-size: 0.6rem;
-    letter-spacing: 0.3em;
+  .tier-legend-slots {
+    font-size: 0.66rem;
+    letter-spacing: 0.14em;
     color: var(--ink-faint);
   }
 
   .sponsor-cta {
-    margin-top: 3rem;
     display: flex;
     align-items: center;
     flex-wrap: wrap;
@@ -113,13 +161,103 @@ const tiers = [
     color: var(--ink-faint);
   }
 
-  @media (max-width: 900px) {
-    .logos--md { grid-template-columns: repeat(2, 1fr); }
-    .logos--sm { grid-template-columns: repeat(3, 1fr); }
+  /* ── Expanded card modal ─────────────────────────────────── */
+  .sponsor-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: grid;
+    place-items: center;
   }
 
-  @media (max-width: 560px) {
-    .logos--lg { grid-template-columns: 1fr; }
-    .logos--sm { grid-template-columns: repeat(2, 1fr); }
+  .sponsor-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(6, 5, 4, 0.72);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    opacity: 0;
+    transition: opacity 0.26s ease;
+  }
+
+  .sponsor-modal.is-open .sponsor-modal-backdrop {
+    opacity: 1;
+  }
+
+  .sponsor-modal-card {
+    --tier-color: var(--gold);
+    position: relative;
+    width: min(90vw, 620px);
+    aspect-ratio: 16 / 10;
+    padding: clamp(1.6rem, 4vw, 3rem);
+    border-radius: 22px;
+    border: 1px solid color-mix(in srgb, var(--tier-color) 60%, transparent);
+    background:
+      radial-gradient(120% 90% at 50% 40%, color-mix(in srgb, var(--tier-color) 12%, transparent), transparent 70%),
+      linear-gradient(160deg, rgba(20, 22, 26, 0.96), rgba(10, 11, 13, 0.96));
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--tier-color) 30%, transparent),
+      0 30px 90px -20px color-mix(in srgb, var(--tier-color) 40%, transparent);
+    display: flex;
+    flex-direction: column;
+    transform: translateY(18px) scale(0.96);
+    opacity: 0;
+    transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.28s ease;
+  }
+
+  .sponsor-modal.is-open .sponsor-modal-card {
+    transform: none;
+    opacity: 1;
+  }
+
+  .sponsor-modal-tier {
+    font-size: clamp(1.4rem, 4vw, 2.4rem);
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--tier-color);
+    line-height: 1;
+  }
+
+  .sponsor-modal-slot {
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.2em;
+    color: var(--ink-faint);
+  }
+
+  .sponsor-modal-logo {
+    flex: 1;
+    margin: 1.4rem 0;
+    display: grid;
+    place-items: center;
+    border: 1px dashed color-mix(in srgb, var(--tier-color) 45%, transparent);
+    border-radius: 12px;
+    background: rgba(241, 233, 216, 0.02);
+  }
+
+  .sponsor-modal-logo span {
+    font-size: 0.82rem;
+    letter-spacing: 0.32em;
+    color: var(--ink-dim);
+  }
+
+  .sponsor-modal-foot {
+    font-size: 0.68rem;
+    letter-spacing: 0.16em;
+    color: var(--ink-faint);
+  }
+
+  .sponsor-modal-close {
+    position: absolute;
+    top: 0.8rem;
+    right: 1.1rem;
+    font-size: 1.8rem;
+    line-height: 1;
+    color: var(--ink-dim);
+    transition: color 0.2s ease;
+  }
+
+  .sponsor-modal-close:hover {
+    color: var(--tier-color);
   }
 </style>

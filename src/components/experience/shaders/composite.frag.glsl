@@ -65,8 +65,8 @@ void main() {
   float mr = length(md);
 
   // Base displacement: always-active noise field across entire screen
-  float baseDisp = 0.015 + 0.010 * sin(uTime * 0.3 + uv.x * 7.0 + uv.y * 5.0);
-  float baseRipple = snoise(uv * 6.0 + uTime * 0.5) * 0.008;
+  float baseDisp = 0.025 + 0.018 * sin(uTime * 0.3 + uv.x * 7.0 + uv.y * 5.0) + 0.012 * snoise(uv * 3.0 + uTime * 0.2);
+  float baseRipple = snoise(uv * 6.0 + uTime * 0.5) * 0.015 + snoise(uv * 10.0 + uTime * 0.7) * 0.008;
 
   // Cursor-driven spike on top
   float cursorInfl = smoothstep(0.45, 0.0, mr) * uMouseA;
@@ -90,7 +90,7 @@ void main() {
 
   // Chromatic separation: always-on base + cursor spike + edge weighting
   float caDist = length(uv - 0.5);
-  float caBase = 0.006 + 0.010 * caDist * caDist + 0.004 * sin(uTime * 0.5 + uv.y * 4.0);
+  float caBase = 0.008 + 0.015 * caDist * caDist + 0.006 * sin(uTime * 0.5 + uv.y * 4.0) + 0.005 * snoise(uv * 4.0 + uTime * 0.3);
   float caCursor = 0.025 * cursorInfl + 0.003 * sin(uTime * 1.5 + mr * 10.0) * cursorInfl;
   float caAmount = caBase + caCursor;
 

@@ -17,8 +17,8 @@
   --blue-deep: #2f5e8f;
   --glow: rgba(230, 181, 74, 0.32);
 
-  --font-display: 'Syne Variable', 'Syne', sans-serif;
-  --font-body: 'Inter Variable', 'Inter', system-ui, sans-serif;
+  --font-display: 'Bricolage Grotesque Variable', 'Bricolage Grotesque', 'Syne', sans-serif;
+  --font-body: 'Hanken Grotesk Variable', 'Hanken Grotesk', system-ui, sans-serif;
   --font-mono: 'Space Mono', ui-monospace, 'SF Mono', monospace;
 
   --pad: clamp(1.25rem, 4vw, 4rem);
@@ -120,6 +120,33 @@ h3 {
   text-wrap: balance;
 }
 
+/* Keep copy legible over the moving WebGL without opaque boxes. */
+h2,
+h3,
+.lede,
+p,
+li,
+.mono {
+  text-shadow: 0 1px 18px rgba(6, 5, 4, 0.55), 0 1px 3px rgba(6, 5, 4, 0.4);
+}
+
+.hero-highlight,
+.hl,
+.hl-dark,
+.title-lit .split-line {
+  text-shadow: none;
+}
+
+/* Section title lights up (and stays lit) once scrolled into view. */
+.title-lit .split-line {
+  display: inline-block;
+  background-color: var(--gold);
+  color: #150f03;
+  padding: 0.02em 0.18em;
+  box-shadow: 0 0 50px -12px rgba(230, 181, 74, 0.5);
+  transition: background-color 0.5s ease, color 0.5s ease;
+}
+
 .display-xl {
   font-size: clamp(2.8rem, 11vw, 9rem);
   text-transform: uppercase;
@@ -174,32 +201,41 @@ h3 {
   letter-spacing: 0.04em;
 }
 
-.accent {
-  background: linear-gradient(100deg, var(--blue), var(--gold-bright) 50%, var(--bronze) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-.accent-blue {
-  background: linear-gradient(100deg, var(--blue), var(--blue-deep));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-.accent-gold {
-  background: linear-gradient(100deg, var(--gold-bright), var(--gold-deep));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
+/* Special / emphasised words render solid white, not a gradient. */
+.accent,
+.accent-blue,
+.accent-gold,
 .accent-bronze {
-  background: linear-gradient(100deg, var(--bronze), var(--bronze-deep));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  background: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  -webkit-text-fill-color: #ffffff;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* ── Highlight utilities ─────────────────────────────────────────── */
+/* Gold bar for short, punchy phrases — same treatment as the hero title. */
+.hl {
+  background: var(--gold);
+  color: #150f03;
+  padding: 0.02em 0.28em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  border-radius: 1px;
+  font-weight: 600;
+}
+
+/* Subtle dark bar that keeps longer copy readable over the busy WebGL,
+   without shouting. Clones cleanly across wrapped lines. */
+.hl-dark {
+  background: rgba(10, 9, 7, 0.55);
+  padding: 0.06em 0.34em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  border-radius: 2px;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
 }
 
 /* ── Layout ─────────────────────────────────────────────────────── */
@@ -236,8 +272,8 @@ main {
 .scrim::before {
   content: '';
   position: absolute;
-  inset: -6rem calc(-1 * var(--pad));
-  background: radial-gradient(95% 100% at 30% 45%, rgba(12, 11, 9, 0.8), transparent 100%);
+  inset: -40vh calc(-1 * var(--pad));
+  background: radial-gradient(120% 80% at 40% 50%, rgba(12, 11, 9, 0.42), transparent 72%);
   pointer-events: none;
   z-index: -1;
 }
@@ -357,12 +393,20 @@ main {
 [data-reveal] {
   opacity: 0;
   transform: translateY(28px);
+  transition: opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1), transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+
+[data-reveal].is-in {
+  opacity: 1;
+  transform: none;
 }
 
 html.no-js [data-reveal],
 html.reduced-motion [data-reveal] {
   opacity: 1;
   transform: none;
+  transition: none;
 }
 
 /* ── Custom cursor ──────────────────────────────────────────────── */

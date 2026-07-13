@@ -25,7 +25,7 @@ const DIM: Record<string, number> = {
   metal: 0.9,
   crowd: 0.62,
   fluid: 1,
-  tree: 0.7,
+  tree: 1.05,
 };
 
 function signalReady() {
@@ -147,6 +147,20 @@ export default function Experience() {
     document.fonts?.ready.then(() => !disposed && measure());
     const settleTimer = setTimeout(measure, 1500);
 
+    // ── Click-to-open on sponsor cards ──────────────────────────
+    let treeActive = false;
+    const onClick = (e: MouseEvent) => {
+      if (!treeActive) return;
+      if ((e.target as HTMLElement).closest('a, button, input, [data-hover]')) return;
+      const ndcX = (e.clientX / window.innerWidth) * 2 - 1;
+      const ndcY = -((e.clientY / window.innerHeight) * 2 - 1);
+      const hit = (scenes.tree as SponsorTree).pick(ndcX, ndcY);
+      if (hit) {
+        window.dispatchEvent(new CustomEvent('sponsor:open', { detail: hit }));
+      }
+    };
+    window.addEventListener('click', onClick);
+
     // ── Frame loop ──────────────────────────────────────────────
     const smoothedPointer = { nx: 0, ny: 0 };
     let last = performance.now();
@@ -187,6 +201,9 @@ export default function Experience() {
       }
       mix = Math.min(1, Math.max(0, mix));
       mix = mix * mix * (3 - 2 * mix); // smoothstep
+
+      // Cards are clickable while the sponsor scene is on screen.
+      treeActive = a.key === 'tree' || b?.key === 'tree';
 
       const args = (r: Run) => {
         const p = Math.min(1, Math.max(0, (c - r.top) / (r.bottom - r.top)));
@@ -261,6 +278,7 @@ export default function Experience() {
       clearTimeout(settleTimer);
       clearTimeout(readyFallback);
       window.removeEventListener('resize', onResize);
+      window.removeEventListener('click', onClick);
       document.removeEventListener('visibilitychange', onVisibility);
       renderer.dispose();
       root.removeChild(renderer.domElement);
