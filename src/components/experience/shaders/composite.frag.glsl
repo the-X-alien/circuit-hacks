@@ -69,7 +69,7 @@ void main() {
   float baseRipple = snoise(uv * 6.0 + uTime * 0.5) * 0.015 + snoise(uv * 10.0 + uTime * 0.7) * 0.008;
 
   // Cursor-driven spike on top
-  float cursorInfl = smoothstep(0.45, 0.0, mr) * uMouseA;
+  float cursorInfl = smoothstep(0.10, 0.0, mr) * uMouseA;
   float infl = 0.08 + cursorInfl; // base 0.08 always active
 
   vec2 dir = mr > 1e-4 ? md / mr : vec2(0.0);
@@ -105,12 +105,24 @@ void main() {
   b.r = texture2D(tB, suvR).r;
   b.g = texture2D(tB, suvG).g;
   b.b = texture2D(tB, suvB).b;
-  col = mix(a, b, uMix);
+  // ── Authored scene handoff: a diagonal wipe with a glowing seam ──
+  // Steady states are untouched (uMix 0 -> all A, uMix 1 -> all B); only the
+  // brief transition reads as a designed sweep rather than a flat crossfade.
+  float diag = uv.x * 0.62 + (1.0 - uv.y) * 0.38;      // sweep direction
+  float front = mix(-0.18, 1.18, uMix);                 // wipe front position
+  float m = smoothstep(front - 0.18, front + 0.18, diag);
+  m = uMix < 0.001 ? 0.0 : (uMix > 0.999 ? 1.0 : 1.0 - m); // B enters from the sweep
+  col = mix(a, b, m);
+
+  // Bright seam riding the wipe front, brightest mid-transition.
+  float seam = smoothstep(0.16, 0.0, abs(diag - front));
+  float seamPulse = uMix * (1.0 - uMix) * 4.0;
+  col += vec3(0.95, 0.76, 0.4) * seam * seamPulse * 0.9;
 
   // ── Bloom ──────────────────────────────────────────────────
   vec3 bloomA = sampleBloom(tA, suvG, uResolution);
   vec3 bloomB = sampleBloom(tB, suvG, uResolution);
-  col += mix(bloomA, bloomB, uMix) * 0.45;
+  col += mix(bloomA, bloomB, m) * 0.45;
 
   // ── Metallic sheen (always-on base + cursor boost) ─────────
   vec3 sheenGold = vec3(0.96, 0.77, 0.38);
@@ -119,11 +131,11 @@ void main() {
   float sheenMix = 0.5 + 0.5 * sin(uTime * 0.3 + uv.x * 3.0 + cursorInfl * 6.0);
   float bronzeMix = 0.2 + 0.3 * cursorInfl;
   vec3 sheen = mix(mix(sheenGold, sheenBlue, sheenMix), sheenBronze, bronzeMix);
-  col += sheen * (0.04 + cursorInfl * 0.26);
-  col += vec3(0.12, 0.08, 0.04) * (0.04 + cursorInfl * 0.56);
+  col += sheen * (0.03 + cursorInfl * 0.10);
+  col += vec3(0.12, 0.08, 0.04) * (0.03 + cursorInfl * 0.20);
 
   // ── Cursor-edge glow ring ──────────────────────────────────
-  float ringGlow = exp(-abs(mr - 0.15) * 80.0) * cursorInfl * 0.12;
+  float ringGlow = exp(-abs(mr - 0.05) * 150.0) * cursorInfl * 0.08;
   col += sheenGold * ringGlow;
 
   // ── Scanline glow (subtle) ─────────────────────────────────

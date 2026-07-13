@@ -47,6 +47,25 @@ import { EVENT_NAME } from '~/config';
     letter-spacing: 0.3em;
     color: var(--ink);
     white-space: nowrap;
+    padding: 0.12em 0.2em;
+    border-radius: 2px;
+    transition: background-color 0.35s ease, color 0.35s ease, padding 0.35s ease,
+      box-shadow 0.35s ease, letter-spacing 0.35s ease;
+  }
+
+  /* On finish, the codename snaps into the gold highlight before the reveal. */
+  .pre-name.lit {
+    background-color: var(--gold);
+    color: #150f03;
+    padding: 0.16em 0.6em;
+    letter-spacing: 0.34em;
+    box-shadow: 0 0 60px -12px rgba(230, 181, 74, 0.6);
+  }
+
+  .pre-inner.settled .pre-bar,
+  .pre-inner.settled .pre-status {
+    opacity: 0;
+    transition: opacity 0.4s ease;
   }
 
   .pre-bar {
@@ -132,9 +151,14 @@ import { EVENT_NAME } from '~/config';
 
     const done = () => {
       clearInterval(drift);
+      clearInterval(scramble);
       setP(100);
       status.textContent = 'SIGNAL ACQUIRED';
-      setTimeout(finish, 550);
+      // Snap the codename to the gold highlight, then reveal the site.
+      nameEl.textContent = NAME;
+      nameEl.classList.add('lit');
+      nameEl.parentElement?.classList.add('settled');
+      setTimeout(finish, 850);
     };
 
     if ((window as any).__siteBus?.ready) done();

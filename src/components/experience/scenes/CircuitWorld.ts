@@ -1,7 +1,15 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { FXScene, type UpdateArgs } from '../FXSceneManager';
 import pcbVert from '../shaders/pcb.vert.glsl';
 import pcbFrag from '../shaders/pcb.frag.glsl';
+
+// Real board model (CC BY 4.0 — "Circuit Board (Free Download)" by Flikd Design).
+// Drop the downloaded file at public/models/circuit-board.glb. If it is missing,
+// the scene falls back to the procedural components below.
+const BOARD_MODEL_URL = '/models/circuit-board.glb';
+const MODEL_ROTATE_X = 0; // radians — tweak if the board loads standing up
+const MODEL_FOOTPRINT = 120; // world units the board is scaled to across the corridor
 
 const CORRIDOR = 600;
 const BOARD_W = 300;
@@ -18,6 +26,8 @@ export class CircuitWorld extends FXScene {
   private sparkParticles!: THREE.Points;
   private glowParticles!: THREE.Points;
   private traceGroup = new THREE.Group();
+  private proceduralGroup = new THREE.Group();
+  private modelGroup = new THREE.Group();
   private smoothedP = 0;
 
   override init(renderer: THREE.WebGLRenderer, lite: boolean): void {
@@ -145,7 +155,7 @@ export class CircuitWorld extends FXScene {
       this.traceGroup.add(hole);
     }
 
-    this.scene.add(this.traceGroup);
+    this.proceduralGroup.add(this.traceGroup);
 
     // ── Components ───────────────────────────────────────────
     const chipMat = new THREE.MeshStandardMaterial({ color: 0x0a0f16, metalness: 0.3, roughness: 0.6 });
@@ -162,7 +172,7 @@ export class CircuitWorld extends FXScene {
       const chip = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), chipMat);
       chip.position.set(x, h / 2, z);
       chip.castShadow = false;
-      this.scene.add(chip);
+      this.proceduralGroup.add(chip);
       this.chips.push(chip);
 
       // Pins
@@ -180,7 +190,7 @@ export class CircuitWorld extends FXScene {
         else if (side === 1) { leg.position.x -= w / 2 + 0.015; leg.position.z += lp; }
         else if (side === 2) { leg.position.z += d / 2 + 0.015; leg.position.x += lp; leg.rotation.y = Math.PI / 2; }
         else { leg.position.z -= d / 2 + 0.015; leg.position.x += lp; leg.rotation.y = Math.PI / 2; }
-        this.scene.add(leg);
+        this.proceduralGroup.add(leg);
       }
 
       // Solder pads
@@ -195,7 +205,7 @@ export class CircuitWorld extends FXScene {
           0.01,
           z + (pi >= 2 ? (pi === 2 ? d * 0.3 : -d * 0.3) : 0)
         );
-        this.scene.add(pad);
+        this.proceduralGroup.add(pad);
       }
     }
 
@@ -211,7 +221,7 @@ export class CircuitWorld extends FXScene {
         new THREE.MeshStandardMaterial({ color: 0x2a3a2a, metalness: 0.4, roughness: 0.5 })
       );
       can.position.set(x, h / 2 - 0.5, z);
-      this.scene.add(can);
+      this.proceduralGroup.add(can);
       this.caps.push(can);
 
       const top = new THREE.Mesh(
@@ -220,7 +230,7 @@ export class CircuitWorld extends FXScene {
       );
       top.rotation.x = -Math.PI / 2;
       top.position.set(x, h - 0.5, z);
-      this.scene.add(top);
+      this.proceduralGroup.add(top);
 
       const stripe = new THREE.Mesh(
         new THREE.PlaneGeometry(0.03, h * 0.5),
@@ -228,7 +238,7 @@ export class CircuitWorld extends FXScene {
       );
       stripe.position.set(x + r + 0.005, h / 2 - 0.5, z);
       stripe.rotation.y = Math.PI / 2;
-      this.scene.add(stripe);
+      this.proceduralGroup.add(stripe);
     }
 
     // Resistors
@@ -247,7 +257,7 @@ export class CircuitWorld extends FXScene {
       body.rotation.x = Math.PI / 2;
       if (dir === 'z') body.rotation.z = Math.PI / 2;
       body.position.set(x, 0.07, z);
-      this.scene.add(body);
+      this.proceduralGroup.add(body);
       this.resistors.push(body);
 
       for (let s = -1; s <= 1; s += 2) {
@@ -262,7 +272,7 @@ export class CircuitWorld extends FXScene {
           0.015,
           z + (dir === 'z' ? s * (len / 2 + 0.08) : 0)
         );
-        this.scene.add(lead);
+        this.proceduralGroup.add(lead);
       }
     }
 
@@ -320,8 +330,69 @@ export class CircuitWorld extends FXScene {
     dirLight.position.set(10, 20, 10);
     this.scene.add(dirLight);
 
+    this.scene.add(this.proceduralGroup);
+    this.scene.add(this.modelGroup);
+    this.loadBoardModel(lite);
+
     this.camera.position.set(0, 4, 15);
     this.camera.lookAt(0, 1, -20);
+  }
+
+  /**
+   * Loads the real board model and tiles it down the corridor. On success the
+   * procedural stand-in components are hidden; on any failure they stay, so the
+   * scene always has content whether or not the .glb is present.
+   */
+  private loadBoardModel(lite: boolean): void {
+    new GLTFLoader().load(
+      BOARD_MODEL_URL,
+      (gltf) => {
+        const model = gltf.scene;
+        // Brighten the imported PBR materials so they read over the dark scene.
+        model.traverse((o) => {
+          const mesh = o as THREE.Mesh;
+          if (mesh.isMesh) {
+            mesh.frustumCulled = false;
+            const mat = mesh.material as THREE.MeshStandardMaterial;
+            if (mat && 'emissive' in mat) {
+              mat.emissive = new THREE.Color(0x101a12);
+              mat.emissiveIntensity = 0.4;
+            }
+          }
+        });
+
+        // Centre, lay flat, and scale to the corridor footprint.
+        const box = new THREE.Box3().setFromObject(model);
+        const size = new THREE.Vector3();
+        const center = new THREE.Vector3();
+        box.getSize(size);
+        box.getCenter(center);
+        model.position.sub(center);
+        model.rotation.x = MODEL_ROTATE_X;
+        const footprint = Math.max(size.x, size.z) || 1;
+        const scale = MODEL_FOOTPRINT / footprint;
+
+        const tileDepth = Math.max(size.x, size.z) * scale * 0.96;
+        const tiles = Math.min(lite ? 4 : 7, Math.ceil(CORRIDOR / tileDepth) + 1);
+        for (let i = 0; i < tiles; i++) {
+          const clone = model.clone(true);
+          clone.scale.setScalar(scale);
+          clone.position.set(0, -0.45, 20 - i * tileDepth);
+          clone.rotation.y = (i % 2) * Math.PI; // alternate so seams don't repeat
+          this.modelGroup.add(clone);
+        }
+
+        // Real board is in — retire the procedural stand-ins.
+        this.proceduralGroup.visible = false;
+        const amb = new THREE.AmbientLight(0x35507a, 0.5);
+        this.scene.add(amb);
+      },
+      undefined,
+      () => {
+        // Missing or failed — keep the procedural scene as the fallback.
+        this.modelGroup.visible = false;
+      }
+    );
   }
 
   override update({ t, dt, p, pointer }: UpdateArgs): void {

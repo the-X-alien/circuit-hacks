@@ -22,7 +22,8 @@
   --font-mono: 'Space Mono', ui-monospace, 'SF Mono', monospace;
 
   --pad: clamp(1.25rem, 4vw, 4rem);
-  --measure: 62ch;
+  --measure: 64ch; /* comfortable body measure */
+  --measure-lede: 46ch; /* tighter measure for large intro text */
 }
 
 /* ── Reset ──────────────────────────────────────────────────────── */
@@ -48,11 +49,19 @@ body {
   color: var(--ink);
   font-family: var(--font-body);
   font-size: clamp(0.95rem, 0.9rem + 0.2vw, 1.05rem);
-  line-height: 1.7;
+  line-height: 1.68;
   font-weight: 360;
   letter-spacing: 0.005em;
   overflow-x: clip;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 img,
@@ -157,10 +166,18 @@ li,
   text-transform: none;
   font-weight: 600;
   letter-spacing: -0.03em;
+  line-height: 1.04; /* a touch of air for multi-line titles */
 }
 
 .display-md {
   font-size: clamp(1.6rem, 3.6vw, 2.8rem);
+  line-height: 1.06;
+}
+
+/* Small headings (card titles) read better with looser tracking + leading. */
+h3 {
+  line-height: 1.2;
+  letter-spacing: -0.01em;
 }
 
 .kicker {
@@ -189,16 +206,18 @@ li,
 
 .lede {
   font-size: clamp(1.05rem, 1.5vw, 1.35rem);
-  line-height: 1.6;
-  font-weight: 340;
+  line-height: 1.52;
+  font-weight: 360;
   color: var(--ink-dim);
-  max-width: var(--measure);
+  max-width: var(--measure-lede);
+  text-wrap: pretty;
 }
 
 .mono {
   font-family: var(--font-mono);
   font-size: 0.82em;
   letter-spacing: 0.04em;
+  font-feature-settings: 'tnum' 1; /* aligned tabular figures */
 }
 
 /* Special / emphasised words render solid white, not a gradient. */
